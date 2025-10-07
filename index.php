@@ -40,6 +40,11 @@ body { font-family: 'Roboto', sans-serif; background-color: #f9f7f1; }
 .btn-custom:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
 @keyframes fadeInDown { from {opacity:0; transform: translateY(-50px);} to {opacity:1; transform:translateY(0);} }
 @keyframes fadeInUp { from {opacity:0; transform: translateY(50px);} to {opacity:1; transform:translateY(0);} }
+
+/* Features section */
+.feature-card { background-color: #fff3e0; border-radius: 15px; padding: 30px; text-align: center; transition: transform 0.3s, box-shadow 0.3s; }
+.feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
+.feature-card i { font-size: 3rem; color: #d68910; margin-bottom: 15px; }
 </style>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
 </head>
@@ -77,3 +82,52 @@ body { font-family: 'Roboto', sans-serif; background-color: #f9f7f1; }
     <p>Your perfect cup of coffee, brewed with love</p>
     <a href="menu.php" class="btn btn-custom btn-lg mt-4">Explore Menu</a>
 </section>
+
+<!-- Features Section -->
+<section class="container my-5">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold">Why Choose Coffee Bliss?</h2>
+        <p class="text-muted">Experience quality, taste, and passion in every cup.</p>
+    </div>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="feature-card">
+                <i class="bi bi-cup-straw"></i>
+                <h4 class="fw-bold">Premium Beans</h4>
+                <p>We source only the finest coffee beans for a rich, aromatic flavor.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <i class="bi bi-people"></i>
+                <h4 class="fw-bold">Expert Baristas</h4>
+                <p>Our skilled baristas craft every cup with precision and care.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <i class="bi bi-clock-history"></i>
+                <h4 class="fw-bold">Fast & Fresh</h4>
+                <p>Enjoy freshly brewed coffee served quickly without compromising quality.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section class="container my-5 text-center">
+    <h2 class="fw-bold mb-4">Our Mission</h2>
+    <p class="lead text-muted mx-auto" style="max-width:700px;">At Coffee Bliss, our goal is to provide a delightful coffee experience that uplifts your day. From bean to cup, we emphasize quality, sustainability, and passion in every step of our process.</p>
+    <a href="about.php" class="btn btn-custom mt-3">Learn More About Us</a>
+</section>
+
+<!-- Footer -->
+<footer class="bg-dark text-white py-4 mt-5">
+    <div class="container text-center">
+        <p>&copy; <?php echo date('Y'); ?> Coffee Bliss. All Rights Reserved.</p>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
