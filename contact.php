@@ -7,7 +7,7 @@ $success_msg = "";
 if(isset($_POST['submit'])){
     $name = $conn->real_escape_string($_POST['name']);
     $email = $conn->real_escape_string($_POST['email']);
-    
+    $message = $conn->real_escape_string($_POST['message']);
 
     $sql = "INSERT INTO contacts (name, email, message) VALUES ('$name', '$email', '$message')";
     if($conn->query($sql)){
@@ -18,6 +18,29 @@ if(isset($_POST['submit'])){
 }
 ?>
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us - Coffee Bliss</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Roboto', sans-serif; background-color: #f8f9fa; }
+        .navbar-custom { background-color: #6f4e37; }
+        .btn-warning { background-color: #f0ad4e; border-color: #f0ad4e; }
+        .btn-warning:hover { background-color: #ec971f; border-color: #d58512; }
+        .contact-hero {
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('images/contact-bg.jpg') center/cover no-repeat;
+            height: 300px; display:flex; align-items:center; justify-content:center; color:white; text-shadow:2px 2px 4px #000;
+        }
+        .contact-card { border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); padding: 30px; background-color:white; }
+        .info-box { background-color: #6f4e37; color: white; border-radius: 10px; padding: 20px; text-align:center; margin-bottom:20px; }
+        .info-box i { font-size: 2rem; margin-bottom:10px; }
+    </style>
+</head>
+<body>
 
 <!-- Navbar -->
 <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
@@ -33,13 +56,15 @@ if(isset($_POST['submit'])){
                 <li class="nav-item"><a class="nav-link" href="about.php">About Us</a></li>
                 <li class="nav-item"><a class="nav-link active" href="contact.php">Contact</a></li>
                 <?php if(isset($_SESSION['user_id'])): ?>
-                    
+                    <li class="nav-item"><a class="nav-link" href="cart.php">Cart</a></li>
+                    <li class="nav-item"><a class="nav-link" href="logout.php">Logout</a></li>
+                <?php else: ?>
+                    <li class="nav-item"><a class="nav-link" href="login.php">Login</a></li>
                 <?php endif; ?>
             </ul>
         </div>
     </div>
 </nav>
-
 
 <!-- Hero Section -->
 <div class="contact-hero mb-5">
