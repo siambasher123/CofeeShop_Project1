@@ -1,0 +1,79 @@
+<?php
+include 'config.php';
+if (session_status() == PHP_SESSION_NONE) session_start();
+
+// Get user info if logged in
+$user_name = '';
+if (isset($_SESSION['user_id'])) {
+    $user_id = $_SESSION['user_id'];
+    $user_result = $conn->query("SELECT first_name FROM users WHERE id='$user_id'");
+    if ($user_result->num_rows > 0) {
+        $user_name = $user_result->fetch_assoc()['first_name'];
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coffee Bliss</title>
+<!-- Bootstrap -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+body { font-family: 'Roboto', sans-serif; background-color: #f9f7f1; }
+.logo { font-family: 'Pacifico', cursive; font-size: 2rem; color: #6f4e37; }
+.hero {
+    background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1470&q=80') center/cover no-repeat;
+    height: 80vh; display:flex; align-items:center; justify-content:center; color:white; text-shadow: 2px 2px 8px rgba(0,0,0,0.8);
+    position: relative;
+}
+.hero h1 { font-size: 3rem; font-weight: 700; animation: fadeInDown 1s ease forwards; }
+.hero p { font-size: 1.5rem; animation: fadeInUp 1s ease 0.5s forwards; opacity: 0; }
+.btn-custom {
+    background: linear-gradient(90deg, #f5b041, #d68910);
+    color: white; font-weight: 600;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.btn-custom:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+@keyframes fadeInDown { from {opacity:0; transform: translateY(-50px);} to {opacity:1; transform:translateY(0);} }
+@keyframes fadeInUp { from {opacity:0; transform: translateY(50px);} to {opacity:1; transform:translateY(0);} }
+</style>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow">
+<div class="container">
+    <a class="navbar-brand logo" href="index.php">☕ Coffee Bliss</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" >
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto align-items-center">
+            <li class="nav-item"><a class="nav-link active" href="index.php">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="menu.php">Menu</a></li>
+            <li class="nav-item"><a class="nav-link" href="seat_reservation.php">Reservation</a></li>
+            <li class="nav-item"><a class="nav-link" href="cart.php">Cart</a></li>
+            <li class="nav-item"><a class="nav-link" href="about.php">About Us</a></li>
+            <li class="nav-item"><a class="nav-link" href="contact.php">Contact Us</a></li>
+            <?php if($user_name): ?>
+                <li class="nav-item"><span class="nav-link text-warning fw-bold">Hello, <?= htmlspecialchars($user_name) ?></span></li>
+                <li class="nav-item"><a class="nav-link" href="logout.php">Logout</a></li>
+            <?php else: ?>
+                <li class="nav-item"><a class="nav-link" href="login.php">Login</a></li>
+            <?php endif; ?>
+        </ul>
+    </div>
+</div>
+</nav>
+
+<!-- Hero Section -->
+<section class="hero text-center d-flex flex-column justify-content-center">
+    <h1>Welcome to Coffee Bliss</h1>
+    <p>Your perfect cup of coffee, brewed with love</p>
+    <a href="menu.php" class="btn btn-custom btn-lg mt-4">Explore Menu</a>
+</section>
