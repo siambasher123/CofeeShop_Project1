@@ -1,3 +1,24 @@
+<?php
+session_start();
+include_once 'config.php';
+
+// Handle form submission
+$success_msg = "";
+if(isset($_POST['submit'])){
+    $name = $conn->real_escape_string($_POST['name']);
+    $email = $conn->real_escape_string($_POST['email']);
+    $message = $conn->real_escape_string($_POST['message']);
+
+    $sql = "INSERT INTO contacts (name, email, message) VALUES ('$name', '$email', '$message')";
+    if($conn->query($sql)){
+        $success_msg = "Your message has been sent successfully!";
+    } else {
+        $success_msg = "Error sending message. Please try again.";
+    }
+}
+?>
+
+
 <!-- Navbar -->
 <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
     <div class="container">
