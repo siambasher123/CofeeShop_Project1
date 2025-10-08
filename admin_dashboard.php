@@ -11,6 +11,7 @@
 </head>
 
 <body>
+
     <div class="d-flex">
         <!-- Sidebar -->
         <div class="sidebar p-3">
@@ -84,6 +85,74 @@
             </div>
         </div>
     </div>
+
+    <script>
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        const salesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: <?php echo json_encode($sales_dates); ?>,
+                datasets: [{
+                    label: 'Total Sales ($)',
+                    data: <?php echo json_encode($sales_totals); ?>,
+                    backgroundColor: 'rgba(111,78,55,0.2)',
+                    borderColor: 'rgba(111,78,55,1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: 'rgba(111,78,55,1)',
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return `$${context.raw.toFixed(2)}`;
+                            }
+                        }
+                    },
+                    zoom: {
+                        pan: {
+                            enabled: true,
+                            mode: 'x'
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true
+                            },
+                            mode: 'x'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Sales ($)'
+                        },
+                        beginAtZero: true
+                    }
+                }
+            },
+            plugins: [ChartZoom]
+        });
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
