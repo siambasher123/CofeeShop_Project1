@@ -2,8 +2,8 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: Oct 06, 2025 at 08:07 PM
+-- Host: 127.0.0.1:3308
+-- Generation Time: Oct 05, 2025 at 07:10 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */
 ;
 --
--- Database: `mycoffeshop`
+-- Database: `mycoffeeshop`
 --
 
 -- --------------------------------------------------------
