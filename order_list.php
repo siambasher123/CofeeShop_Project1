@@ -1,3 +1,54 @@
+<?php
+session_start();
+include_once 'config.php';
+
+// Restrict to admin
+if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+    header("Location: login.php");
+    exit();
+}
+
+// Handle Yes/No action
+if (isset($_GET['id']) && isset($_GET['action'])) {
+    $order_id = intval($_GET['id']);
+    $action = $_GET['action'];
+
+    if ($action == 'yes') {
+        // Move order to transaction1
+        $order = $conn->query("SELECT * FROM orders WHERE id=$order_id")->fetch_assoc();
+        if ($order) {
+            $conn->query("INSERT INTO transaction1 (order_id, user_id, total, created_at) VALUES (
+                " . $order['id'] . ",
+                " . $order['user_id'] . ",
+                " . $order['total'] . ",
+                NOW()
+            )");
+
+            // Mark order as processed
+            $conn->query("UPDATE orders SET status='processed' WHERE id=$order_id");
+
+            $_SESSION['message'] = "Order taken!";
+        }
+    } elseif ($action == 'no') {
+        // Safe to delete completely
+        $conn->query("DELETE FROM orders WHERE id=$order_id");
+        $_SESSION['message'] = "Order removed!";
+    }
+
+    header("Location: order_list.php");
+    exit();
+}
+
+// Fetch orders + user info
+$orders = $conn->query("
+    SELECT o.id, o.user_id, o.total, o.status, u.first_name, u.last_name
+    FROM orders o
+    JOIN users u ON o.user_id = u.id
+    WHERE o.status IS NULL OR o.status != 'processed'
+    ORDER BY o.id DESC
+");
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
