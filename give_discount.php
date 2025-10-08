@@ -51,6 +51,24 @@ $products = $conn->query("SELECT * FROM products ORDER BY id DESC");
         <a href="logout.php">Logout</a>
     </div>
 
+    <div class="content flex-grow-1">
+        <h2>Give Discount to Products</h2>
+
+        <?php if(isset($success)): ?>
+            <div class="alert alert-success"><?php echo $success; ?></div>
+        <?php endif; ?>
+
+        <table class="table table-bordered mt-3">
+            <thead>
+                <tr>
+                    <th>Product ID</th>
+                    <th>Name</th>
+                    <th>Original Price</th>
+                    <th>Discount Price</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
                 <?php while($p = $products->fetch_assoc()): ?>
                     <tr>
                         <td><?php echo $p['id']; ?></td>
@@ -63,6 +81,12 @@ $products = $conn->query("SELECT * FROM products ORDER BY id DESC");
                             <?php endif; ?>
                         </td>
                         <td>
+                            <form method="post" class="d-flex">
+                                <input type="hidden" name="product_id" value="<?php echo $p['id']; ?>">
+                                <input type="number" step="0.01" min="0" name="discount_price" class="form-control me-2" 
+                                       value="<?php echo $p['discount_price'] ?: $p['price']; ?>" required>
+                                <button type="submit" name="apply_discount" class="btn btn-warning">Apply</button>
+                            </form>
                         </td>
                     </tr>
                 <?php endwhile; ?>
