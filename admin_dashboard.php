@@ -1,3 +1,34 @@
+<?php
+session_start();
+include_once 'config.php';
+
+// Restrict access to admins
+if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+    header("Location: login.php");
+    exit();
+}
+
+// Fetch dashboard stats
+$product_count = $conn->query("SELECT COUNT(*) as count FROM products")->fetch_assoc()['count'];
+$order_count = $conn->query("SELECT COUNT(*) as count FROM orders")->fetch_assoc()['count'];
+$contact_count = $conn->query("SELECT COUNT(*) as count FROM contacts")->fetch_assoc()['count'];
+$transaction_count = $conn->query("SELECT COUNT(*) as count FROM transaction1")->fetch_assoc()['count'];
+
+// Fetch sales data
+$sales_result = $conn->query("
+    SELECT DATE(created_at) as sale_date, SUM(total) as total_sales
+    FROM transaction1
+    GROUP BY DATE(created_at)
+    ORDER BY sale_date ASC
+");
+$sales_dates = [];
+$sales_totals = [];
+while ($row = $sales_result->fetch_assoc()) {
+    $sales_dates[] = $row['sale_date'];
+    $sales_totals[] = $row['total_sales'];
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
