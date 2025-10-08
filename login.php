@@ -1,3 +1,38 @@
+<?php
+include_once 'config.php'; // Include DB connection
+
+// Handle login
+if (isset($_POST['login'])) {
+    $email = $_POST['email'];
+    $password = $_POST['password'];
+
+    // Get user from database
+    $sql = "SELECT * FROM users WHERE email='$email'";
+    $result = $conn->query($sql);
+
+    if ($result->num_rows == 1) {
+        $user = $result->fetch_assoc();
+        if (password_verify($password, $user['password'])) {
+            // Save session
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['role'] = $user['role'];
+
+            // Redirect based on role
+            if ($user['role'] == 'admin') {
+                header("Location: admin_dashboard.php");
+            } else {
+                header("Location: index.php");
+            }
+            exit();
+        } else {
+            $error = "Invalid password.";
+        }
+    } else {
+        $error = "Email not found. Please signup first.";
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
