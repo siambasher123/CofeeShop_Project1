@@ -1,3 +1,32 @@
+<?php
+include_once 'config.php'; // Include only once
+
+if (isset($_POST['signup'])) {
+    $first_name = $_POST['first_name'];
+    $last_name  = $_POST['last_name'];
+    $email      = $_POST['email'];
+    $password   = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $phone      = $_POST['phone'];
+    $address    = $_POST['address'];
+    $role       = $_POST['role'];
+
+    // Check if email already exists
+    $check = $conn->query("SELECT * FROM users WHERE email='$email'");
+    if ($check->num_rows > 0) {
+        $error = "Email already registered. Please login.";
+    } else {
+        $sql = "INSERT INTO users (first_name,last_name,email,password,phone,address,role)
+                VALUES ('$first_name','$last_name','$email','$password','$phone','$address','$role')";
+        if ($conn->query($sql) === TRUE) {
+            echo "<script>alert('Signup successful! Please login.'); window.location='login.php';</script>";
+            exit();
+        } else {
+            $error = "Error: " . $conn->error;
+        }
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
