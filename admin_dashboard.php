@@ -42,7 +42,6 @@ while ($row = $sales_result->fetch_assoc()) {
 </head>
 
 <body>
-
     <div class="d-flex">
         <!-- Sidebar -->
         <div class="sidebar p-3">
