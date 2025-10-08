@@ -9,7 +9,7 @@ $servername = "localhost";
 $username = "root";
 $password = "";
 $dbname = "mycoffeeshop";
-$port = 3308; // <-- Add your MySQL port here
+$port = 3306; // <-- Add your MySQL port here
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname, $port);

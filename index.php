@@ -18,7 +18,7 @@ if (isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coffee Bliss</title>
+    <title>Coffee Shop</title>
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts -->
@@ -122,7 +122,7 @@ if (isset($_SESSION['user_id'])) {
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow">
         <div class="container">
-            <a class="navbar-brand logo" href="index.php">☕ Coffee Bliss</a>
+            <a class="navbar-brand logo" href="index.php">☕ Coffee Shop</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -147,7 +147,7 @@ if (isset($_SESSION['user_id'])) {
 
     <!-- Hero Section -->
     <section class="hero text-center d-flex flex-column justify-content-center">
-        <h1>Welcome to Coffee Bliss</h1>
+        <h1>Welcome to Coffee Shop</h1>
         <p>Your perfect cup of coffee, brewed with love</p>
         <a href="menu.php" class="btn btn-custom btn-lg mt-4">Explore Menu</a>
     </section>
@@ -155,7 +155,7 @@ if (isset($_SESSION['user_id'])) {
     <!-- Features Section -->
     <section class="container my-5">
         <div class="text-center mb-5">
-            <h2 class="fw-bold">Why Choose Coffee Bliss?</h2>
+            <h2 class="fw-bold">Why Choose Coffee Shop?</h2>
             <p class="text-muted">Experience quality, taste, and passion in every cup.</p>
         </div>
         <div class="row g-4">
@@ -186,14 +186,14 @@ if (isset($_SESSION['user_id'])) {
     <!-- About Section -->
     <section class="container my-5 text-center">
         <h2 class="fw-bold mb-4">Our Mission</h2>
-        <p class="lead text-muted mx-auto" style="max-width:700px;">At Coffee Bliss, our goal is to provide a delightful coffee experience that uplifts your day. From bean to cup, we emphasize quality, sustainability, and passion in every step of our process.</p>
+        <p class="lead text-muted mx-auto" style="max-width:700px;">At Coffee Shop, our goal is to provide a delightful coffee experience that uplifts your day. From bean to cup, we emphasize quality, sustainability, and passion in every step of our process.</p>
         <a href="about.php" class="btn btn-custom mt-3">Learn More About Us</a>
     </section>
 
     <!-- Footer -->
     <footer class="bg-dark text-white py-4 mt-5">
         <div class="container text-center">
-            <p>&copy; <?php echo date('Y'); ?> Coffee Bliss. All Rights Reserved.</p>
+            <p>&copy; <?php echo date('Y'); ?> Coffee Shop. All Rights Reserved.</p>
         </div>
     </footer>
 
