@@ -33,3 +33,50 @@ if(isset($_POST['add_product'])){
     }
 }
 ?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Product - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Roboto', sans-serif; }
+        .container { margin-top: 50px; }
+        .btn-warning { background-color: #f0ad4e; border-color: #f0ad4e; }
+        .btn-warning:hover { background-color: #ec971f; border-color: #d58512; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2 class="mb-4">Add New Product</h2>
+
+    <?php 
+    if(isset($error)) echo '<div class="alert alert-danger">'.$error.'</div>';
+    if(isset($success)) echo '<div class="alert alert-success">'.$success.'</div>';
+    ?>
+
+    <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label>Product Name</label>
+            <input type="text" name="name" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label>Price</label>
+            <input type="number" step="0.01" name="price" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label>Description</label>
+            <textarea name="description" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="mb-3">
+            <label>Product Image</label>
+            <input type="file" name="image" class="form-control" accept="image/*" required>
+        </div>
+        <button type="submit" name="add_product" class="btn btn-warning">Add Product</button>
+        <a href="admin_dashboard.php" class="btn btn-secondary">Back</a>
+    </form>
+</div>
+</body>
+</html>
