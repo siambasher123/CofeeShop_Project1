@@ -15,10 +15,9 @@ $contacts = $conn->query("SELECT * FROM contacts ORDER BY id DESC");
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    
-
-
-
+    <meta charset="UTF-8">
+    <title>Contact List - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { font-family: 'Roboto', sans-serif; background-color: #f8f9fa; }
         .sidebar { min-height: 100vh; background-color: #343a40; }
@@ -30,8 +29,6 @@ $contacts = $conn->query("SELECT * FROM contacts ORDER BY id DESC");
 </head>
 <body>
 
-
-
 <div class="d-flex">
     <!-- Sidebar -->
     <div class="sidebar p-3">
@@ -40,11 +37,12 @@ $contacts = $conn->query("SELECT * FROM contacts ORDER BY id DESC");
         <a href="add_products.php">Add Products</a>
         <a href="inventory_list.php">Inventory List</a>
         <a href="order_list.php">Order List</a>
-        
-
+        <a href="transaction_history.php">Transaction History</a>
+        <a href="contact_list.php" class="active">Contact List</a>
         <a href="logout.php">Logout</a>
         <a href="index.php" class="mt-3 btn btn-warning w-100 text-center">Back to Homepage</a>
     </div>
+
     <!-- Main content -->
     <div class="content flex-grow-1">
         <nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-4">
@@ -85,7 +83,26 @@ $contacts = $conn->query("SELECT * FROM contacts ORDER BY id DESC");
                                 <h5 class="modal-title" id="contactModalLabel<?php echo $c['id']; ?>">Message from <?php echo htmlspecialchars($c['name']); ?></h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                               </div>
-                              
+                              <div class="modal-body">
+                                <p><strong>Email:</strong> <?php echo htmlspecialchars($c['email']); ?></p>
+                                <p><strong>Message:</strong></p>
+                                <p><?php echo nl2br(htmlspecialchars($c['message'])); ?></p>
+                              </div>
+                              <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <tr><td colspan="5" class="text-center">No contact messages found</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
