@@ -1,5 +1,5 @@
 <?php
-include_once 'config.php'; // Include only once
+include_once 'config.php';
 
 if (isset($_POST['signup'])) {
     $first_name = $_POST['first_name'];
@@ -10,8 +10,8 @@ if (isset($_POST['signup'])) {
     $address    = $_POST['address'];
     $role       = $_POST['role'];
 
-    // Check if email already exists
     $check = $conn->query("SELECT * FROM users WHERE email='$email'");
+
     if ($check->num_rows > 0) {
         $error = "Email already registered. Please login.";
     } else {
