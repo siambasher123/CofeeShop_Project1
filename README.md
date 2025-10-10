@@ -676,8 +676,206 @@ If you want `http://coffeeshop.local/`:
 
 
 ## Setup — Linux (LAMP)
+Add this under **“Setup — Linux (LAMP)”** (replace the TODO there). It’s a single, text-heavy commit.
 
-<!-- TODO: apt install steps; Apache vhost; permissions; php.ini tips. 15–30 lines. -->
+````md
+## Setup — Linux (LAMP)
+
+### Prerequisites
+- **Ubuntu 22.04/24.04** or **Debian 12** (others OK with equivalent package names)
+- sudo access
+- Optional: Git
+
+### 1) Install Apache, PHP, MySQL
+```bash
+sudo apt update
+sudo apt install -y apache2 mysql-server \
+  php php-cli php-mysql php-mysqli php-xml php-mbstring php-intl php-zip php-curl
+````
+
+Verify:
+
+```bash
+apache2 -v
+php -v
+mysql --version
+```
+
+### 2) Start & enable services
+
+```bash
+sudo systemctl enable --now apache2
+sudo systemctl enable --now mysql
+sudo systemctl status apache2 mysql
+```
+
+### 3) Secure MySQL (recommended)
+
+```bash
+sudo mysql_secure_installation
+```
+
+Accept strong password policy, remove anonymous users, disallow remote root, remove test DB.
+
+### 4) Create database and user
+
+```bash
+sudo mysql
+```
+
+Then in the MySQL shell:
+
+```sql
+CREATE DATABASE coffeeshop
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+CREATE USER 'coffee_user'@'localhost' IDENTIFIED BY 'secret';
+GRANT ALL PRIVILEGES ON coffeeshop.* TO 'coffee_user'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+### 5) Place the project
+
+**Option A — VirtualHost (recommended):**
+
+```bash
+sudo mkdir -p /var/www/coffeeshop
+sudo chown -R $USER:www-data /var/www/coffeeshop
+# If using git:
+git clone <your-repo-url> /var/www/coffeeshop
+```
+
+**Option B — Simple path (no vhost):**
+
+```bash
+sudo mkdir -p /var/www/html/coffeeshop
+sudo chown -R $USER:www-data /var/www/html/coffeeshop
+git clone <your-repo-url> /var/www/html/coffeeshop
+```
+
+Recommended permissions (safe defaults):
+
+```bash
+find /var/www/coffeeshop -type d -exec chmod 755 {} \;
+find /var/www/coffeeshop -type f -exec chmod 644 {} \;
+```
+
+### 6) Configure Apache (VirtualHost)
+
+Create `/etc/apache2/sites-available/coffeeshop.conf`:
+
+```
+<VirtualHost *:80>
+    ServerName coffeeshop.local
+    DocumentRoot /var/www/coffeeshop
+
+    <Directory /var/www/coffeeshop>
+        Require all granted
+        AllowOverride All
+        Options -Indexes
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/coffeeshop_error.log
+    CustomLog ${APACHE_LOG_DIR}/coffeeshop_access.log combined
+</VirtualHost>
+```
+
+Enable site and modules:
+
+```bash
+sudo a2ensite coffeeshop
+sudo a2enmod rewrite
+# (optional) sudo a2dissite 000-default
+echo "127.0.0.1  coffeeshop.local" | sudo tee -a /etc/hosts
+sudo systemctl reload apache2
+```
+
+### 7) Configure `config.php`
+
+Edit `/var/www/coffeeshop/config.php`:
+
+```php
+<?php
+define('DB_HOST', '127.0.0.1');
+define('DB_USER', 'coffee_user');   // or 'root'
+define('DB_PASS', 'secret');        // or '' for local root (not for production)
+define('DB_NAME', 'coffeeshop');
+
+define('APP_ENV', 'local');         // local | production
+date_default_timezone_set('Asia/Dhaka');
+```
+
+All DB connections should use `utf8mb4`.
+
+### 8) PHP settings (dev vs prod)
+
+Find your `php.ini`:
+
+```bash
+php --ini
+```
+
+Local/dev:
+
+```ini
+error_reporting = E_ALL
+display_errors = On
+```
+
+Production:
+
+```ini
+display_errors = Off
+log_errors = On
+```
+
+Optional tweaks (if needed):
+
+```ini
+memory_limit = 256M
+post_max_size = 16M
+upload_max_filesize = 16M
+```
+
+### 9) Verify pages load
+
+* With vhost: `http://coffeeshop.local/`
+* Without vhost (Option B): `http://localhost/coffeeshop/`
+
+Check:
+
+* `index.php` renders navbar and hero
+* `menu.php`, `login.php` respond 200
+* Admin page exists at `/admin_dashboard.php` (will enforce auth later)
+
+### 10) Firewall (if enabled)
+
+```bash
+sudo ufw allow 'Apache Full'
+sudo ufw status
+```
+
+### 11) Common pitfalls & fixes
+
+* **403 Forbidden**: wrong `DocumentRoot` or directory permissions; ensure `www-data` can read.
+* **Downloading PHP instead of executing**: missing PHP module—ensure `libapache2-mod-php` is part of `php` meta-package on your distro; restart Apache.
+* **“Access denied for user 'coffee_user'@'localhost'”**: recheck credentials and privileges; confirm `php-mysql` is installed.
+* **Emoji/Unicode shows as `???`**: ensure DB/table/connection all use `utf8mb4` + `utf8mb4_unicode_ci`.
+* **Session not persisting**: verify cookies enabled; check `session.save_path` writable by web server.
+* **404 after enabling vhost**: confirm `ServerName` in `/etc/hosts` and correct `DocumentRoot`; run `sudo apachectl -t` to validate config.
+
+### 12) Quick no-vhost alternative (dev only)
+
+If you want zero Apache config, place the project under `/var/www/html/coffeeshop` and browse:
+`http://localhost/coffeeshop/`. You can add a proper VirtualHost later.
+
+```
+
+**Suggested commit message:**  
+`docs(setup): add Linux (LAMP) setup guide with vhost, permissions, PHP/MySQL tips`
+```
+
 
 ## Environment & Secrets
 
