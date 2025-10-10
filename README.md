@@ -1,4 +1,6 @@
-# CoffeeShop PHP — README
+# CoffeeShop— README
+
+> This README is designed to be grown **gradually** in many small, meaningful commits (docs-only). Each subsection below is a bite‑sized chunk you can complete and commit separately.
 
 ---
 
@@ -40,11 +42,103 @@
 
 ## Project Overview
 
-<!-- TODO: 15–30 lines. What problem this CoffeeShop app solves; quick summary of features; who it’s for. -->
+The **CoffeeShop** application is a small-but-complete web app that demonstrates how to run a menu-driven ordering system with login, cart, checkout, seat reservation, and a lightweight admin back office. It is intentionally written with straightforward PHP + MySQL so learners can trace every request from page load → database query → HTML output without framework abstractions.
+
+**What problems it solves**
+
+* Lets customers **browse the menu**, add items to a **session-backed cart**, and place orders.
+* Provides a simple **seat reservation** workflow for in‑store dining.
+* Gives admins a clear **dashboard** to manage products, view orders, and **apply discounts**.
+* Records **transaction history** and basic contact messages for later review.
+* Demonstrates **secure defaults** (prepared statements, basic input validation, session handling) suitable for coursework and small demos.
+
+**Who it’s for**
+
+* Students learning end‑to‑end web app structure with PHP, HTML/CSS/JS, and MySQL.
+* Instructors who want a concrete codebase to discuss sessions, cookies, forms, state, and persistence.
+* Hobbyists prototyping a coffee shop / small F&B ordering flow.
+
+**High‑level capabilities**
+
+* **Authentication**: login, signup, logout; session-based user identity; basic role separation (customer vs admin).
+* **Catalog**: menu listing, product details (name, price, availability), image placeholders.
+* **Cart**: add/remove/update quantities; price calculation with subtotal and discount application.
+* **Ordering**: place order, store to DB, view order list; simple status updates by admin.
+* **Seat Reservation**: choose seats, avoid conflicts, record reservations.
+* **Discounts**: admin can define flat/percent discounts and apply constraints.
+* **Admin Tools**: add/edit products, monitor orders, review contacts, basic KPIs.
+* **Contact/Info Pages**: contact form for messages; about page for branding copy.
+
+**Non‑goals (by design, to keep it teachable)**
+
+* No heavy frameworks or ORMs; raw PHP + mysqli/PDO so logic is transparent.
+* No payment gateway integration (can be added later).
+* Minimal JS; server‑rendered pages first, then progressive enhancements as exercises.
+
+**Learning highlights**
+
+* How **sessions and cookies** track user state between requests.
+* How to structure **form handling** (POST) and sanitize inputs.
+* How to layer **validation, business rules, and DB writes**.
+* How to design a **schema** for items, orders, order_items, users, and reservations.
+* How to build a maintainable **README** and developer docs incrementally.
 
 ## Live Demo / Screens
 
-<!-- TODO: Add links or describe screenshots; list 5–10 screens and what to look for. -->
+> **Demo URL:** http://localhost/coffeeshop
+
+1. **Home / Landing (`index.php`)**
+
+   * Highlights featured drinks and entry points to **Menu** and **Login**.
+   * Shows current user state (Guest vs Logged‑in) in the navbar.
+2. **Login (`login.php`)**
+
+   * Email/username + password form, server‑side error messages, redirect behavior.
+   * Note how failed attempts are handled and what session keys are set on success.
+3. **Signup (`signup.php`)**
+
+   * Required fields, password rules, duplicate email handling.
+   * Post‑signup redirect to dashboard or menu.
+4. **Menu (`menu.php`)**
+
+   * Product cards (name, price); **Add to Cart** buttons.
+   * Empty‑state behavior when no items exist.
+5. **Cart (`cart.php`)**
+
+   * Line items with quantities, remove/update controls, subtotal.
+   * Discount indicator (if any) and proceed‑to‑checkout button.
+6. **Order List / Summary (`order_list.php`)**
+
+   * Orders placed by the current user; basic statuses (e.g., pending/served).
+   * Link to **Transaction History** when available.
+7. **Seat Reservation (`seat_reservation.php` & `seats_to_reserve.php`)**
+
+   * Seat map or list; selection, conflict messages, and confirmation state.
+   * Show a successful reservation record and how it appears to admin.
+8. **Admin Dashboard (`admin_dashboard.php`)**
+
+   * Quick stats (orders today, revenue placeholder, active reservations).
+   * Navigation to product CRUD, discounts, contacts.
+9. **Add Products (`add_products.php`)**
+
+   * Create/edit form; validation failures; success messages.
+   * Example image or placeholder handling.
+10. **Give Discount (`give_discount.php`)**
+
+    * Flat vs percent toggle; scope/eligibility; preview of final price effect.
+11. **Transaction History (`transaction_history.php`)**
+
+    * Chronological list of transactions with totals and discount notes.
+12. **Contact & About (`contact.php`, `contact_list.php`, `about.php`)**
+
+    * User contact form; admin inbox listing; static about text with branding.
+
+**Screenshot guidance**
+
+* Use consistent browser width and theme for clean comparisons.
+* Prefer PNG at 1× scale; name files predictably (e.g., `screens/login-success.png`).
+* Add short captions under each image: what to notice and how to reproduce it.
+* Keep sensitive data blurred; never expose real credentials.
 
 ## Tech Stack
 
