@@ -70,3 +70,44 @@ $reserved_json = json_encode($reserved);
         </tbody>
     </table>
 </section>
+
+<script>
+// Define full seat matrix (adjust rows/cols as per your coffee shop layout)
+const seatMatrix = [
+    [1,1,0,1,1,1,0,1,1,1,1,0,1,1,1,0,1,1,1,1],
+    [1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,1],
+    [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1],
+    [1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1],
+    [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1],
+    [1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,1],
+    [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1]
+];
+
+let reservedSeats = <?= $reserved_json ?>;
+
+function showSeats(){
+    const container = document.getElementById('seatContainer');
+    container.innerHTML = '';
+    seatMatrix.forEach((row,r)=>{
+        const rowDiv = document.createElement('div');
+        rowDiv.classList.add('seat-row');
+        row.forEach((seat,c)=>{
+            const seatDiv = document.createElement('div');
+            if(seat===1){
+                seatDiv.classList.add('seat');
+                const res = reservedSeats.find(s=>s.row==r && s.col==c);
+                if(res){
+                    seatDiv.classList.add('reserved');
+                    seatDiv.title = `${res.user} at ${res.time}`;
+                    seatDiv.innerHTML = res.user.charAt(0);
+                }
+            } else seatDiv.classList.add('gap');
+            rowDiv.appendChild(seatDiv);
+        });
+        container.appendChild(rowDiv);
+    });
+}
+window.onload = showSeats;
+</script>
+</body>
+</html>
