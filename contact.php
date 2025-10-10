@@ -118,17 +118,17 @@ if (isset($_POST['submit'])) {
                 <div class="info-box">
                     <i class="bi bi-geo-alt-fill"></i>
                     <h5>Our Location</h5>
-                    <p>123 Coffee St, Brewtown, USA</p>
+                    <p>Fulbarigate, Khulna</p>
                 </div>
                 <div class="info-box">
                     <i class="bi bi-envelope-fill"></i>
                     <h5>Email Us</h5>
-                    <p>info@coffeebliss.com</p>
+                    <p>info@coffeeshop.com</p>
                 </div>
                 <div class="info-box">
                     <i class="bi bi-telephone-fill"></i>
                     <h5>Call Us</h5>
-                    <p>+1 234 567 890</p>
+                    <p>+880 1234 567890</p>
                 </div>
             </div>
 
