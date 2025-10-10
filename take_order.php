@@ -70,7 +70,6 @@ if(isset($_POST['place_order'])){
 }
 ?>
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -82,4 +81,61 @@ if(isset($_POST['place_order'])){
 <body class="bg-light">
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container">
+    <a class="navbar-brand" href="index.php">Coffee Bliss</a>
+    <div class="collapse navbar-collapse">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a href="index.php" class="nav-link">Home</a></li>
+        <li class="nav-item"><a href="menu.php" class="nav-link">Menu</a></li>
+        <li class="nav-item"><a href="cart.php" class="nav-link">Cart</a></li>
+        <li class="nav-item"><a href="logout.php" class="nav-link">Logout</a></li>
+      </ul>
+    </div>
+  </div>
 </nav>
+
+<div class="container my-5">
+  <h2 class="text-center mb-4">Confirm Your Order</h2>
+
+  <table class="table table-bordered text-center bg-white shadow-sm">
+    <thead class="table-dark">
+      <tr>
+        <th>#</th>
+        <th>Item</th>
+        <th>Price (USD)</th>
+        <th>Quantity</th>
+        <th>Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php
+      $i = 1; $total = 0;
+      $cart_query->data_seek(0); // Reset pointer to reuse
+      while($row = $cart_query->fetch_assoc()):
+          $price = !empty($row['discount_price']) ? $row['discount_price'] : $row['price'];
+          $subtotal = $price * $row['quantity'];
+          $total += $subtotal;
+      ?>
+      <tr>
+        <td><?= $i++ ?></td>
+        <td><?= htmlspecialchars($row['name']) ?></td>
+        <td>$<?= number_format($price, 2) ?></td>
+        <td><?= $row['quantity'] ?></td>
+        <td>$<?= number_format($subtotal, 2) ?></td>
+      </tr>
+      <?php endwhile; ?>
+    </tbody>
+  </table>
+
+  <div class="text-end mb-4">
+    <h4>Total: <strong>$<?= number_format($total, 2) ?></strong></h4>
+  </div>
+
+  <form method="POST" class="text-center">
+    <button type="submit" name="place_order" class="btn btn-success btn-lg px-5">Place Order</button>
+    <a href="cart.php" class="btn btn-secondary btn-lg ms-2">Back to Cart</a>
+  </form>
+</div>
+
+</body>
+</html>
