@@ -317,10 +317,101 @@ if (password_verify($loginPassword, $hashFromDb)) {
 - **Docs-first approach**: each page/module has a dedicated README subsection (see “Pages & What They Do” and “Endpoints & Routes”).
 
 
+
+
+
 ## Architecture
 
-<!-- TODO: Sketch the high-level architecture in prose: client → PHP controllers → DB. Where sessions/cookies fit. 15–25 lines. -->
+### High-Level Components
+- **Client (Browser)**: Renders HTML/CSS/JS. Sends form POSTs and simple GET requests.
+- **Web Server**: Apache 2.4 serving `.php` files.
+- **Application Runtime**: PHP (procedural pages) executing per-request. Uses `mysqli`/PDO for DB access.
+- **Database**: MySQL 8+/MariaDB for persistent data (users, products, orders, order_items, reservations, contacts, discounts).
+- **Session Store**: PHP default (file-based) keyed by `PHPSESSID` cookie.
+- **Static Assets**: Served by Apache (images/CSS/JS). No build pipeline required.
 
+### Request Lifecycle (typical page)
+1. **HTTP request** arrives at `*.php` (e.g., `menu.php`).
+2. PHP **loads config** (`config.php`), sets timezone/charset, connects to DB.
+3. PHP **starts session** (`session_start()`), reads `$_SESSION` (auth, role).
+4. If the page accepts **form input** (POST/GET), PHP reads, validates, and sanitizes data.
+5. Application performs **DB queries** using prepared statements.
+6. Business rules run (e.g., pricing, seat-availability checks).
+7. PHP renders **HTML** with safely escaped dynamic content.
+8. On mutations (login, add-to-cart, checkout), PHP may **set session** keys and **redirect**.
+9. Response is sent. Browser updates DOM (minimal JS) or navigates to next page.
+10. Errors in dev show as messages; in prod they are hidden/logged.
+
+### Data Flow (common)
+- **Read-mostly pages** (e.g., `menu.php`) → `SELECT ... FROM products`.
+- **Mutations** (e.g., `cart.php` updates) → write to session or DB, then redirect (POST/Redirect/GET).
+- **Checkout** → create `orders` + `order_items` rows in a single logical unit of work.
+- **Seat reservation** → validate seat availability, insert reservation row, return confirmation.
+
+### State & Identity
+- **Auth cookie**: `PHPSESSID` only (no JWT). Identity lives in `$_SESSION`.
+- **Session keys**:
+  - `$_SESSION['user_id']`: numeric user primary key.
+  - `$_SESSION['role']`: `'customer' | 'admin'`.
+  - optional flash: `$_SESSION['flash_success']`, `$_SESSION['flash_error']`.
+- **Login flow**: verify password hash → set session → `session_regenerate_id(true)` → redirect.
+- **Logout**: unset keys and/or destroy session → redirect to `index.php`.
+
+### Pages & Responsibilities (runtime graph)
+```
+
+index.php
+├─ menu.php ──┬─ cart.php ── checkout (writes orders, order_items) ──► order_list.php
+│             └─ give_discount.php (admin only; affects pricing rules)
+├─ seat_reservation.php ──► seats_to_reserve.php (validate & persist reservation)
+├─ login.php / signup.php ──► (set session) ──► index.php / menu.php
+├─ contact.php ──► (store message) ──► contact_list.php (admin only)
+└─ admin_dashboard.php ──► add_products.php / transaction_history.php / contact_list.php
+
+```
+
+### Security Boundaries
+- **Input validation**: `filter_input()` / explicit checks on all POST/GET fields.
+- **SQL injection defense**: prepared statements for **every** query.
+- **XSS defense**: escape on output (HTML context) for user-supplied values.
+- **Session hardening**:
+  - `session_regenerate_id(true)` on login.
+  - Use `httponly` cookie; set `secure` under HTTPS.
+- **Authorization**:
+  - Guard admin pages (`admin_dashboard.php`, `give_discount.php`, etc.) by checking `$_SESSION['role'] === 'admin'`.
+  - Guard customer-only flows by checking `$_SESSION['user_id']`.
+- **Error exposure**:
+  - Dev: show errors (`display_errors=1`).
+  - Prod: hide errors, log to file; never leak stack traces or SQL.
+
+### Persistence Model (overview)
+- **users**: id, name, email (unique), password_hash, role, created_at.
+- **products**: id, name, price (decimal), status/stock, created_at.
+- **orders**: id, user_id (FK), total, status (`pending|served|cancelled`), created_at.
+- **order_items**: id, order_id (FK), product_id (FK), qty, unit_price.
+- **reservations**: id, user_id (FK), seat_id/label, reserved_at, status.
+- **contacts**: id, user_id (nullable), subject, message, created_at.
+- **discounts** (optional): id, type (`flat|percent`), value, active_from/to.
+
+> Full column types and constraints will be detailed in **Database Schema**.
+
+### Error Handling & Redirects
+- On validation fail: set `$_SESSION['flash_error']` → redirect back to originating page.
+- On success: set `$_SESSION['flash_success']` → redirect to canonical view (e.g., cart/order list).
+- Use consistent **PRG (Post/Redirect/Get)** to avoid double submissions.
+
+### Performance & UX
+- Queries are simple and indexed; ensure indexes on `users.email`, `orders.user_id`, `order_items.order_id`, `reservations.user_id`.
+- Keep pages small and server-rendered; optional JS enhancements only where needed.
+- Pagination can be added for large lists (orders, contacts).
+
+### Extensibility
+- Payment gateway can be integrated at checkout with minimal changes to the order pipeline.
+- Switch to **PDO** or a lightweight DAO later without breaking page contracts.
+- Move common layout/header/footer into `require`-able partials to reduce duplication.
+- Optional CSRF tokens can be added to forms for stronger protection.
+```
+```
 ## Folder & File Map
 
 **Important app files:**
