@@ -548,9 +548,132 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
 
 
+````md
 ## Setup — Windows (XAMPP)
 
-<!-- TODO: Step-by-step: clone → put under htdocs → create DB → import schema → set config.php → run at http://localhost/coffeeshop. 15–30 lines. -->
+### Prerequisites
+- **Windows 10/11**
+- **XAMPP 8.2+** with at least: Apache, MySQL, phpMyAdmin
+- Optional: Git for Windows (to clone the repo)
+
+### 1) Install XAMPP & start services
+1. Download XAMPP from apachefriends.org and install to `C:\xampp\`.
+2. Open **XAMPP Control Panel** → click **Start** for **Apache** and **MySQL**.
+3. Verify:
+   - Apache running on **http://localhost/**
+   - MySQL running on port **3306** (default)
+
+> If Apache won’t start (port 80/443 in use), stop IIS/Skype/VMware listeners or change Apache ports via **Config → Service and Port Settings**.  
+> If MySQL fails, ensure no other MySQL service (“MySQL80”) is already bound to 3306.
+
+### 2) Place the project under `htdocs`
+- Path should be: `C:\xampp\htdocs\coffeeshop\`
+- If using Git:
+  ```bash
+  cd C:\xampp\htdocs
+  git clone <your-repo-url> coffeeshop
+````
+
+### 3) Create the database (phpMyAdmin or CLI)
+
+Open **http://localhost/phpmyadmin** and run:
+
+```sql
+CREATE DATABASE coffeeshop
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+```
+
+Optionally create a dedicated dev user (recommended):
+
+```sql
+CREATE USER 'coffee_user'@'localhost' IDENTIFIED BY 'secret';
+GRANT ALL PRIVILEGES ON coffeeshop.* TO 'coffee_user'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+(For quick local dev you can also use the default `root` user with empty password.)
+
+### 4) Configure `config.php`
+
+Edit `C:\xampp\htdocs\coffeeshop\config.php`:
+
+```php
+<?php
+define('DB_HOST', '127.0.0.1');
+define('DB_USER', 'coffee_user');   // or 'root'
+define('DB_PASS', 'secret');        // or '' for default root (not for production)
+define('DB_NAME', 'coffeeshop');
+
+define('APP_ENV', 'local');         // local | production
+date_default_timezone_set('Asia/Dhaka');
+```
+
+> All DB connections should set charset to `utf8mb4` to support full Unicode.
+
+### 5) (Optional) Import schema/data
+
+If you already have a schema dump (e.g., `docs/schema.sql`), import via phpMyAdmin → **Import**.
+If not, you can proceed; the README’s **Database Schema** section will define tables step-by-step.
+
+### 6) Verify pages load
+
+* Home: **[http://localhost/coffeeshop/index.php](http://localhost/coffeeshop/index.php)**
+* Menu: **[http://localhost/coffeeshop/menu.php](http://localhost/coffeeshop/menu.php)**
+* Login: **[http://localhost/coffeeshop/login.php](http://localhost/coffeeshop/login.php)**
+* Admin dashboard (will require an admin user later):
+  **[http://localhost/coffeeshop/admin_dashboard.php](http://localhost/coffeeshop/admin_dashboard.php)**
+
+You should see the navbar and basic pages render; some features will be limited until tables exist.
+
+### 7) Development error mode (local only)
+
+In `config.php` (when `APP_ENV === 'local'`) enable verbose errors:
+
+```php
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+```
+
+For production, disable display and log errors instead:
+
+```php
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+```
+
+### 8) Common pitfalls & fixes
+
+* **Blank page / 500 error:** check `htdocs\coffeeshop\config.php` path and PHP syntax; enable dev errors.
+* **“Access denied for user” (1045):** confirm DB_USER/DB_PASS; if using `root`, try empty password; otherwise (recommended) grant privileges to `coffee_user`.
+* **“Unknown database ‘coffeeshop’”:** database wasn’t created—rerun the `CREATE DATABASE` step.
+* **Garbled characters/emoji:** ensure connection uses `utf8mb4` and tables are `utf8mb4_unicode_ci`.
+* **Session doesn’t persist:** confirm cookies enabled; verify `session.save_path` is writable (XAMPP default is fine).
+
+### 9) Optional: pretty local URL (VirtualHost)
+
+If you want `http://coffeeshop.local/`:
+
+1. Edit `C:\xampp\apache\conf\extra\httpd-vhosts.conf` and add:
+
+   ```
+   <VirtualHost *:80>
+     ServerName coffeeshop.local
+     DocumentRoot "C:/xampp/htdocs/coffeeshop"
+     <Directory "C:/xampp/htdocs/coffeeshop">
+       Require all granted
+       AllowOverride All
+     </Directory>
+   </VirtualHost>
+   ```
+2. Edit hosts file as Administrator: `C:\Windows\System32\drivers\etc\hosts` → add:
+
+   ```
+   127.0.0.1  coffeeshop.local
+   ```
+3. Restart Apache; visit **[http://coffeeshop.local/](http://coffeeshop.local/)**.
+
+
 
 ## Setup — Linux (LAMP)
 
