@@ -424,7 +424,129 @@ index.php
 * `transaction_history.php`, `contact.php`, `contact_list.php`, `about.php`
 * `config.php`
 
-<!-- TODO: For each file, add 2–5 bullets explaining role, inputs, outputs, session vars used. Commit one file’s notes per commit. -->
+
+````md
+### `index.php` — Landing / Entry
+
+**Purpose**
+- Public entry point for guests and logged-in users.
+- Presents primary navigation to **Menu**, **Reservation**, **Cart**, **About**, **Contact**, and **Login/Logout**.
+- Reflects authentication state in the navbar (guest vs customer vs admin).
+
+**Primary Responsibilities**
+- Render hero/intro content with a clear call-to-action (e.g., **Explore Menu**).
+- Show conditional nav items based on `$_SESSION['role']`.
+- Avoid mutations; this page is read-only (no DB writes).
+
+**Inputs**
+- **GET:** none required.
+- **POST:** not used here.
+- **Session (read-only):**
+  - `$_SESSION['user_id']` — numeric user id when authenticated.
+  - `$_SESSION['role']` — `'customer' | 'admin'`.
+  - Optional flash messages: `$_SESSION['flash_success']`, `$_SESSION['flash_error']`.
+
+**Outputs**
+- HTML layout with navbar, hero text, and quick links.
+- Conditional links: **Admin** appears only for `role === 'admin'`.
+- Optional flash banners if present in session (then cleared).
+
+**Dependencies**
+- `config.php` — timezone, DB constants, environment flags.
+- Session must be started before reading `$_SESSION`.
+
+**Minimal control flow**
+1. `require 'config.php'`.
+2. `session_start()`.
+3. Read `$_SESSION['user_id']` and `$_SESSION['role']` (if any).
+4. Render navbar:
+   - Guest → show **Login**.
+   - Authenticated → show **Logout** (+ **Admin** link for admins).
+5. Render hero section with CTA to `menu.php`.
+6. If flash messages exist, show once and clear.
+
+**Example skeleton**
+```php
+<?php
+require_once __DIR__ . '/config.php';
+session_start();
+
+$userId = $_SESSION['user_id'] ?? null;
+$role   = $_SESSION['role']    ?? null;
+
+$flashSuccess = $_SESSION['flash_success'] ?? null;
+$flashError   = $_SESSION['flash_error']   ?? null;
+unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+?>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Coffee Shop — Welcome</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+
+<nav>
+  <a href="index.php">Home</a>
+  <a href="menu.php">Menu</a>
+  <a href="seat_reservation.php">Reservation</a>
+  <a href="cart.php">Cart</a>
+  <a href="about.php">About Us</a>
+  <a href="contact.php">Contact Us</a>
+  <?php if ($userId): ?>
+    <?php if ($role === 'admin'): ?><a href="admin_dashboard.php">Admin</a><?php endif; ?>
+    <a href="logout.php">Logout</a>
+  <?php else: ?>
+    <a href="login.php">Login</a>
+  <?php endif; ?>
+</nav>
+
+<?php if ($flashSuccess): ?>
+  <div class="alert success"><?= htmlspecialchars($flashSuccess, ENT_QUOTES, 'UTF-8') ?></div>
+<?php endif; ?>
+<?php if ($flashError): ?>
+  <div class="alert error"><?= htmlspecialchars($flashError, ENT_QUOTES, 'UTF-8') ?></div>
+<?php endif; ?>
+
+<main>
+  <h1>Welcome to Coffee Shop</h1>
+  <p>Freshly brewed beverages and snacks — order online or reserve a seat.</p>
+  <p><a href="menu.php">Explore Menu →</a></p>
+</main>
+
+</body>
+</html>
+````
+
+**Security & robustness notes**
+
+* Escape any dynamic text with `htmlspecialchars(...)` before output.
+* Do not assume non-null session keys; default to guest when missing.
+* Do not auto-redirect authenticated users away from the landing page (let them choose).
+* Keep this page free from sensitive queries; DB connection is not required here.
+
+**Edge cases**
+
+* Session present but user record deleted → treat as guest; links remain safe (downstream pages enforce auth).
+* Empty database (no products) → `menu.php` must handle empty state gracefully.
+* Flash message set on previous page → show once here, then clear.
+
+**Testing checklist**
+
+* Guest sees **Login**; no **Admin** link; all public links resolve (200).
+* Customer sees **Logout**, **Cart**, **Reservation**; still no **Admin** link.
+* Admin sees **Admin** link; click-through reaches `admin_dashboard.php` and enforces role check.
+* Flash banners render when set, then disappear on refresh (PRG-friendly).
+* Page loads without PHP warnings in dev (`display_errors=1`) and without leaking details in prod.
+
+**Related pages**
+
+* `menu.php` — primary CTA target.
+* `login.php` / `signup.php` — auth entry.
+* `admin_dashboard.php` — admin-only.
+
+
 
 ## Setup — Windows (XAMPP)
 
