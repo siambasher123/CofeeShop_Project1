@@ -133,16 +133,134 @@ The **CoffeeShop** application is a small-but-complete web app that demonstrates
 
     * User contact form; admin inbox listing; static about text with branding.
 
-**Screenshot guidance**
-
-* Use consistent browser width and theme for clean comparisons.
-* Prefer PNG at 1× scale; name files predictably (e.g., `screens/login-success.png`).
-* Add short captions under each image: what to notice and how to reproduce it.
-* Keep sensitive data blurred; never expose real credentials.
-
 ## Tech Stack
 
-<!-- TODO: PHP, MySQL, HTML/CSS/JS, Bootstrap/Tailwind?, XAMPP; mention PHP version. 10–20 lines. -->
+### Languages & Runtime
+
+* **PHP**: 8.1–8.3 recommended (works on 7.4+, but password/APIs and typing are better on 8.x).
+* **MySQL / MariaDB**: MySQL 8.0+ (or MariaDB 10.5+). Default collation: `utf8mb4_unicode_ci`.
+* **Web Server**: Apache 2.4 (via XAMPP on Windows; LAMP on Linux).
+* **Frontend**: HTML5, CSS3, vanilla JavaScript (no heavy framework).
+* **CLI tools**: `php`, `mysql`, `git`.
+
+### PHP Extensions / Functions Used
+
+* **mysqli** (or **PDO**): database access with prepared statements.
+* **session**: session-based authentication/state (`session_start()`).
+* **password_hash / password_verify**: secure password storage (bcrypt).
+* **filter_input / filter_var**: input sanitization.
+* **intl** (optional): formatting/collations if needed.
+* **openssl** (optional): stronger random bytes / tokens.
+
+### Dev Environments
+
+* **Windows (XAMPP)**: Apache + PHP + MySQL in one bundle; phpMyAdmin included.
+* **Linux (LAMP)**: `apache2`, `php`, `php-mysqli`/`php-mysql`, `mysql-server`.
+* **phpMyAdmin**: convenient DB admin in dev; optional in prod.
+
+### Directory Conventions (selected)
+
+* `/` — public document root (all `.php` in this project are public for simplicity).
+* `config.php` — DB credentials and shared configuration.
+* Future-friendly: move non-public helpers into a separate folder and include via PHP `require`.
+
+### Configuration (via `config.php`)
+
+Expected keys:
+
+```php
+define('DB_HOST', '127.0.0.1');
+define('DB_USER', 'root');
+define('DB_PASS', '');          // set a password in real deployments
+define('DB_NAME', 'coffeeshop');
+define('APP_ENV', 'local');      // local|production
+date_default_timezone_set('Asia/Dhaka'); // adjust to your locale
+```
+
+* **Charset**: all DB connections use `utf8mb4` to support full Unicode (emojis, symbols).
+* **Env flag**: `APP_ENV` toggles dev-friendly error output vs production-safe display.
+
+### Error Handling Defaults
+
+* **Development**:
+
+  ```php
+  error_reporting(E_ALL);
+  ini_set('display_errors', '1');
+  ```
+* **Production**:
+
+  ```php
+  error_reporting(E_ALL);
+  ini_set('display_errors', '0'); // log errors instead of displaying
+  ```
+* Consider writing errors to an `error_log` file (Apache or custom).
+
+### Sessions & Cookies
+
+* **Session ID**: default cookie `PHPSESSID`.
+* **Lifetime**: defaults are fine for dev; can be tuned with `session.cookie_lifetime`.
+* **Security**: set `httponly`, `secure` (when using HTTPS), and regenerate on login:
+
+  ```php
+  session_start();
+  // after successful login:
+  session_regenerate_id(true);
+  $_SESSION['user_id'] = $user['id'];
+  $_SESSION['role']    = $user['role']; // 'customer' | 'admin'
+  ```
+
+### Database Access (mysqli example)
+
+Connection + prepared statements:
+
+```php
+$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+if ($mysqli->connect_error) {
+    die('DB connection failed: ' . $mysqli->connect_error);
+}
+$mysqli->set_charset('utf8mb4');
+
+// sample: read one product
+$stmt = $mysqli->prepare('SELECT id, name, price FROM products WHERE id = ?');
+$stmt->bind_param('i', $productId);
+$stmt->execute();
+$result = $stmt->get_result();
+$product = $result->fetch_assoc();
+$stmt->close();
+```
+
+### Password Storage
+
+* Use `password_hash()` (bcrypt by default) and `password_verify()`:
+
+```php
+$hash = password_hash($plainPassword, PASSWORD_DEFAULT);
+// later:
+if (password_verify($loginPassword, $hashFromDb)) {
+    // ok
+}
+```
+
+### Frontend Notes
+
+* CSS is intentionally simple; you can plug in **Bootstrap 5** via CDN if desired:
+
+  ```html
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css" rel="stylesheet">
+  ```
+* Minimal JS (form validation hints, small interactions) to keep server-rendered flow teachable.
+
+### Browser / Platform Support
+
+* Recent Chrome/Edge/Firefox (desktop). Works on mobile, but layout is basic by design.
+
+### Why This Stack
+
+* **Transparent learning**: raw PHP + MySQL makes control flow and security concerns visible.
+* **Easy setup**: XAMPP/LAMP are widely available; no build step required.
+* **Portable**: runs on modest hardware and common hosting.
+
 
 ## Key Features
 
