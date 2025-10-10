@@ -262,9 +262,60 @@ if (password_verify($loginPassword, $hashFromDb)) {
 * **Portable**: runs on modest hardware and common hosting.
 
 
+
+
 ## Key Features
 
-<!-- TODO: Bullet list (10–30 items): menu browsing, cart, checkout, seat reservation, admin approvals, discounts, etc. -->
+### Customer Experience
+- **Home / Landing**: clear entry points to Menu, Reservation, Cart, About, Contact, and Login.
+- **Menu browsing** (`menu.php`): list of items with name, price, short description/notes.
+- **Add to Cart**: one-click add; quantity defaults to 1 with ability to update later.
+- **Order history** (`order_list.php`): see previously placed orders and basic status.
+- **Contact form** (`contact.php`): submit a message; admins can review in inbox.
+- **About** (`about.php`): simple static info page for brand/story.
+
+### Authentication & Session
+- **Signup** (`signup.php`): create account with server-side validation and hashed passwords.
+- **Login** (`login.php`): email/username + password using `password_verify()`.
+- **Logout** (`logout.php`): clears session and regenerates the ID.
+- **Session keys**: `$_SESSION['user_id']`, `$_SESSION['role']` (`customer`/`admin`), and minimal profile info.
+- **Session hygiene**: `session_regenerate_id(true)` on successful login to mitigate fixation.
+
+### Cart & Ordering
+- **Cart page** (`cart.php`): view items, update quantities, remove items.
+- **Pricing summary**: shows item totals and cart **subtotal**; discount display if applicable.
+- **Checkout flow**: confirm cart, write order + order items to the database, show confirmation in `order_list.php`.
+- **Transaction log** (`transaction_history.php`): basic record of completed transactions.
+
+### Seat Reservation
+- **Seat selection** (`seat_reservation.php`, `seats_to_reserve.php`): choose seat(s) from available list/map.
+- **Conflict prevention**: server-side checks to avoid double booking.
+- **Confirmation state**: successful reservation persisted to DB and visible to admin.
+- **Edge cases**: already reserved seats, invalid seat IDs, stale selections handled on the server.
+
+### Admin & Back Office
+- **Dashboard** (`admin_dashboard.php`): quick stats and navigation to product, discount, order, and contact modules.
+- **Products** (`add_products.php`): create/edit basic product fields (name, price, availability/notes).
+- **Discounts** (`give_discount.php`): define **flat** or **percent** discounts with simple rules.
+- **Order monitoring**: review orders and update basic status fields.
+- **Contact inbox** (`contact_list.php`): list and triage messages from users.
+
+### Validation & Security
+- **Prepared statements**: all DB reads/writes use `mysqli` prepared queries to reduce SQL injection risk.
+- **Output escaping**: HTML-escape user-supplied values before rendering.
+- **Password hashing**: `password_hash()` + `password_verify()` (bcrypt).
+- **Error modes**: dev vs prod (`APP_ENV`) toggles display/logging; production avoids leaking stack traces.
+- **Cookie flags**: encourage `httponly` and `secure` (when HTTPS) for session cookies.
+
+### Configuration & Environment
+- **Single point of config** (`config.php`): DB host, name, user, pass; `APP_ENV`; timezone.
+- **UTF-8 everywhere**: sets `utf8mb4` on connections for full Unicode support (emoji, symbols).
+- **Portable setup**: runs on XAMPP (Windows) or LAMP (Linux) without extra build tooling.
+
+### Extensibility (future-friendly)
+- **Optional modules**: payment gateway integration, search/filtering for the menu, responsive UI polish.
+- **Docs-first approach**: each page/module has a dedicated README subsection (see “Pages & What They Do” and “Endpoints & Routes”).
+
 
 ## Architecture
 
