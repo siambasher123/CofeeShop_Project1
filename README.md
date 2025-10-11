@@ -881,11 +881,404 @@ If you want zero Apache config, place the project under `/var/www/html/coffeesho
 
 ## Sample Data
 
-<!-- TODO: Provide INSERT examples for users, products, seats, orders. 20–50 lines (SQL fenced block). -->
+> Run these in **phpMyAdmin → SQL** after creating your tables.
+> The bcrypt hash below corresponds to plaintext **`password`** so you can log in with the listed emails.
+
+```sql
+-- ------------------------------------------------------------
+-- SAMPLE DATA (idempotent-ish): INSERT ... ON DUPLICATE KEY UPDATE
+-- Adjust table/column names if your schema differs.
+-- ------------------------------------------------------------
+
+-- Consistent charset
+SET NAMES utf8mb4;
+
+-- Use your database name (align with config.php)
+USE mycoffeeshop;
+
+-- =========================
+-- USERS
+-- =========================
+-- Password for all test users = 'password'
+-- Standard bcrypt test hash (60 chars)
+SET @pwd := '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
+
+INSERT INTO users (first_name, last_name, email, password, role, created_at)
+VALUES
+  ('Admin',   'User',   'admin@coffee.test',   @pwd, 'admin',    NOW()),
+  ('Alice',   'Coffee', 'alice@coffee.test',   @pwd, 'customer', NOW()),
+  ('Bob',     'Beans',  'bob@coffee.test',     @pwd, 'customer', NOW()),
+  ('Charlie', 'Latte',  'charlie@coffee.test', @pwd, 'customer', NOW())
+ON DUPLICATE KEY UPDATE email = VALUES(email);
+
+-- Cache user IDs for later use
+SET @uid_admin   := (SELECT id FROM users WHERE email='admin@coffee.test');
+SET @uid_alice   := (SELECT id FROM users WHERE email='alice@coffee.test');
+SET @uid_bob     := (SELECT id FROM users WHERE email='bob@coffee.test');
+SET @uid_charlie := (SELECT id FROM users WHERE email='charlie@coffee.test');
+
+-- =========================
+-- PRODUCTS
+-- =========================
+-- If your table has different columns, edit (e.g., drop status if absent)
+INSERT INTO products (name, price, status, created_at)
+VALUES
+  ('Espresso',         120.00, 'available', NOW()),
+  ('Americano',        150.00, 'available', NOW()),
+  ('Cappuccino',       180.00, 'available', NOW()),
+  ('Latte',            190.00, 'available', NOW()),
+  ('Mocha',            210.00, 'available', NOW()),
+  ('Flat White',       200.00, 'available', NOW()),
+  ('Cold Brew',        170.00, 'available', NOW()),
+  ('Iced Latte',       200.00, 'available', NOW()),
+  ('Hot Chocolate',    160.00, 'available', NOW()),
+  ('Chai Latte',       150.00, 'available', NOW()),
+  ('Blueberry Muffin',  90.00, 'available', NOW()),
+  ('Croissant',        110.00, 'available', NOW())
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+-- Product IDs for convenience
+SET @pid_espresso   := (SELECT id FROM products WHERE name='Espresso');
+SET @pid_americano  := (SELECT id FROM products WHERE name='Americano');
+SET @pid_capp       := (SELECT id FROM products WHERE name='Cappuccino');
+SET @pid_latte      := (SELECT id FROM products WHERE name='Latte');
+SET @pid_mocha      := (SELECT id FROM products WHERE name='Mocha');
+SET @pid_flatwhite  := (SELECT id FROM products WHERE name='Flat White');
+SET @pid_coldbrew   := (SELECT id FROM products WHERE name='Cold Brew');
+SET @pid_icedlatte  := (SELECT id FROM products WHERE name='Iced Latte');
+SET @pid_hotchoc    := (SELECT id FROM products WHERE name='Hot Chocolate');
+SET @pid_chai       := (SELECT id FROM products WHERE name='Chai Latte');
+SET @pid_muffin     := (SELECT id FROM products WHERE name='Blueberry Muffin');
+SET @pid_croissant  := (SELECT id FROM products WHERE name='Croissant');
+
+-- =========================
+-- DISCOUNTS (optional)
+-- =========================
+-- type: 'flat' | 'percent'
+INSERT INTO discounts (type, value, active_from, active_to)
+VALUES
+  ('percent', 10.00, DATE('2025-10-01'), DATE('2025-12-31')),
+  ('flat',    50.00, DATE('2025-10-01'), DATE('2025-11-30'))
+ON DUPLICATE KEY UPDATE value = VALUES(value), active_to = VALUES(active_to);
+
+-- =========================
+-- ORDERS + ORDER ITEMS
+-- =========================
+START TRANSACTION;
+
+-- Order 1 (Alice): 2x Latte (190) + 1x Muffin (90) = 470.00
+INSERT INTO orders (user_id, total, status, created_at)
+VALUES (@uid_alice, 470.00, 'pending', NOW())
+ON DUPLICATE KEY UPDATE total = VALUES(total), status = VALUES(status);
+SET @oid1 := LAST_INSERT_ID();
+
+INSERT INTO order_items (order_id, product_id, qty, unit_price)
+VALUES
+  (@oid1, @pid_latte,   2, 190.00),
+  (@oid1, @pid_muffin,  1,  90.00)
+ON DUPLICATE KEY UPDATE qty = VALUES(qty), unit_price = VALUES(unit_price);
+
+-- Order 2 (Bob): 1x Cappuccino (180) + 2x Croissant (110) = 400.00
+INSERT INTO orders (user_id, total, status, created_at)
+VALUES (@uid_bob, 400.00, 'served', NOW())
+ON DUPLICATE KEY UPDATE total = VALUES(total), status = VALUES(status);
+SET @oid2 := LAST_INSERT_ID();
+
+INSERT INTO order_items (order_id, product_id, qty, unit_price)
+VALUES
+  (@oid2, @pid_capp,      1, 180.00),
+  (@oid2, @pid_croissant, 2, 110.00)
+ON DUPLICATE KEY UPDATE qty = VALUES(qty), unit_price = VALUES(unit_price);
+
+-- Order 3 (Charlie): 1x Mocha (210) + 1x Hot Chocolate (160) = 370.00
+INSERT INTO orders (user_id, total, status, created_at)
+VALUES (@uid_charlie, 370.00, 'pending', NOW())
+ON DUPLICATE KEY UPDATE total = VALUES(total), status = VALUES(status);
+SET @oid3 := LAST_INSERT_ID();
+
+INSERT INTO order_items (order_id, product_id, qty, unit_price)
+VALUES
+  (@oid3, @pid_mocha,    1, 210.00),
+  (@oid3, @pid_hotchoc,  1, 160.00)
+ON DUPLICATE KEY UPDATE qty = VALUES(qty), unit_price = VALUES(unit_price);
+
+COMMIT;
+
+-- =========================
+-- TRANSACTIONS (optional; align with transaction_history.php)
+-- =========================
+-- Example columns: user_id, amount, method, status, created_at
+INSERT INTO transactions (user_id, amount, method, status, created_at)
+VALUES
+  (@uid_alice,   470.00, 'cash',   'paid',    NOW()),
+  (@uid_bob,     400.00, 'card',   'paid',    NOW()),
+  (@uid_charlie, 370.00, 'bkash',  'pending', NOW())
+ON DUPLICATE KEY UPDATE status = VALUES(status);
+
+-- =========================
+-- RESERVATIONS (align with seat_reservation.php)
+-- =========================
+-- If your table uses seat_id instead of seat_label, adjust accordingly
+INSERT INTO reservations (user_id, seat_label, reserved_at, status)
+VALUES
+  (@uid_alice,   'A3', NOW(), 'confirmed'),
+  (@uid_bob,     'A4', NOW(), 'confirmed'),
+  (@uid_charlie, 'B1', NOW(), 'pending')
+ON DUPLICATE KEY UPDATE status = VALUES(status);
+
+-- =========================
+-- CONTACT MESSAGES (align with contact_list.php)
+-- =========================
+INSERT INTO contacts (user_id, subject, message, created_at)
+VALUES
+  (@uid_bob,     'Opening hours',  'What time do you open on Fridays?', NOW()),
+  (@uid_charlie, 'Menu feedback',  'Loved the Mocha, please add caramel!', NOW()),
+  (@uid_alice,   'Reservation',    'Can I reserve a table near the window?', NOW())
+ON DUPLICATE KEY UPDATE message = VALUES(message);
+
+-- =========================
+-- QUICK TEST LOGINS
+-- =========================
+-- Admin    → email: admin@coffee.test    | password: password
+-- Customer → email: alice@coffee.test    | password: password
+-- (Bob/Charlie also use the same sample password)
+```
+
+### Optional: Reset Sample Data (safe clean-up)
+
+```sql
+-- Use with care: remove test rows while keeping your structure
+DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE user_id IN (@uid_alice, @uid_bob, @uid_charlie));
+DELETE FROM orders       WHERE user_id IN (@uid_alice, @uid_bob, @uid_charlie);
+DELETE FROM transactions WHERE user_id IN (@uid_alice, @uid_bob, @uid_charlie);
+DELETE FROM reservations WHERE user_id IN (@uid_alice, @uid_bob, @uid_charlie);
+DELETE FROM contacts     WHERE user_id IN (@uid_alice, @uid_bob, @uid_charlie);
+DELETE FROM products     WHERE name IN ('Espresso','Americano','Cappuccino','Latte','Mocha','Flat White','Cold Brew','Iced Latte','Hot Chocolate','Chai Latte','Blueberry Muffin','Croissant');
+DELETE FROM users        WHERE email IN ('alice@coffee.test','bob@coffee.test','charlie@coffee.test');
+```
+
+> **Note:** If any inserts fail, your table names/columns differ from the examples. Edit the column lists to match your schema (e.g., drop `status` if your `products` table doesn’t have it).
+
 
 ## User Roles & Permissions
 
-<!-- TODO: Customer vs Admin capabilities; who can access which page. 15–25 lines. -->
+This app uses **session-based identity** with a simple role model:
+
+* **Guest** — not logged in (no `$_SESSION['user_id']`).
+* **Customer** — logged in user (`$_SESSION['role'] === 'customer'`).
+* **Admin** — elevated user (`$_SESSION['role'] === 'admin'`).
+
+Identity keys set on successful login:
+
+```php
+$_SESSION['user_id'] = $user['id'];
+$_SESSION['role']    = $user['role']; // 'customer' | 'admin'
+// Good practice:
+session_regenerate_id(true); // prevent fixation after login
+```
+
+### Access Matrix (pages vs roles)
+
+| Page / Module                 | Guest |    Customer    |     Admin     |
+| ----------------------------- | :---: | :------------: | :-----------: |
+| `index.php` (home)            |   ✅   |        ✅       |       ✅       |
+| `about.php`                   |   ✅   |        ✅       |       ✅       |
+| `menu.php`                    |   ✅   |        ✅       |       ✅       |
+| `login.php`, `signup.php`     |   ✅   |        ➖       |       ➖       |
+| `logout.php`                  |   ➖   |        ✅       |       ✅       |
+| `cart.php` (view/update)      |   ✅*  |        ✅       |       ✅       |
+| `order_list.php`              |   ➖   | ✅ (own orders) | ✅ (all users) |
+| `seat_reservation.php`        |   ➖   |        ✅       |       ✅       |
+| `seats_to_reserve.php` (POST) |   ➖   |        ✅       |       ✅       |
+| `contact.php`                 |   ✅   |        ✅       |       ✅       |
+| `contact_list.php`            |   ➖   |        ➖       |       ✅       |
+| `admin_dashboard.php`         |   ➖   |        ➖       |       ✅       |
+| `add_products.php`            |   ➖   |        ➖       |       ✅       |
+| `give_discount.php`           |   ➖   |        ➖       |       ✅       |
+| `transaction_history.php`     |   ➖   |        ➖       |       ✅       |
+
+> *Cart behavior: Guests may stage items in session, but **checkout requires login** (recommended). If your current flow already requires login earlier, keep it strict.
+
+### Server-Side Authorization Helpers (drop-in)
+
+Create `auth.php` and include it at the top of pages that need protection.
+
+```php
+<?php
+// auth.php — common auth/authorization helpers
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+function current_user_id(): ?int {
+    return isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
+}
+
+function current_role(): string {
+    return $_SESSION['role'] ?? 'guest';
+}
+
+function is_logged_in(): bool {
+    return current_user_id() !== null;
+}
+
+function is_admin(): bool {
+    return current_role() === 'admin';
+}
+
+function require_login(): void {
+    if (!is_logged_in()) {
+        $_SESSION['flash_error'] = 'Please log in to continue.';
+        header('Location: login.php');
+        exit;
+    }
+}
+
+function require_admin(): void {
+    if (!is_admin()) {
+        http_response_code(403);
+        echo 'Forbidden (admin only).';
+        exit;
+    }
+}
+```
+
+#### Usage examples
+
+**Admin-only page (`admin_dashboard.php`, `add_products.php`, `give_discount.php`):**
+
+```php
+<?php
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
+require_login();
+require_admin();
+// ... rest of the page
+```
+
+**Customer-only page (e.g., `order_list.php`, `seat_reservation.php`):**
+
+```php
+<?php
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
+require_login();
+// Users see only their own data in the queries below
+```
+
+### Row-Level Permissions (enforced in SQL)
+
+Customers must only see/manipulate **their own** rows. Always filter by `current_user_id()`.
+
+**Orders (customer self-view):**
+
+```php
+$userId = current_user_id();
+$stmt = $mysqli->prepare('SELECT id, total, status, created_at FROM orders WHERE user_id = ? ORDER BY id DESC');
+$stmt->bind_param('i', $userId);
+$stmt->execute();
+```
+
+**Orders (admin all-view):**
+
+```php
+if (!is_admin()) { die('Forbidden'); }
+$stmt = $mysqli->prepare('SELECT o.id, u.email, o.total, o.status, o.created_at FROM orders o JOIN users u ON u.id = o.user_id ORDER BY o.id DESC');
+$stmt->execute();
+```
+
+**Reservations (customer self-view):**
+
+```php
+$userId = current_user_id();
+$stmt = $mysqli->prepare('SELECT id, seat_label, reserved_at, status FROM reservations WHERE user_id = ? ORDER BY id DESC');
+$stmt->bind_param('i', $userId);
+$stmt->execute();
+```
+
+> Never trust hidden inputs like `user_id` from forms — derive the acting user from `$_SESSION`.
+
+### UI Gating vs Server Gating
+
+* **UI gating:** Hide admin links in the navbar for non-admins (good UX).
+* **Server gating (required):** Admin pages must still call `require_admin()` to block direct URL access.
+
+**Navbar snippet (example):**
+
+```php
+<?php if (is_logged_in()): ?>
+  <?php if (is_admin()): ?><a href="admin_dashboard.php">Admin</a><?php endif; ?>
+  <a href="logout.php">Logout</a>
+<?php else: ?>
+  <a href="login.php">Login</a>
+<?php endif; ?>
+```
+
+### Form & Action Rules
+
+* **Mutations require auth:** checkout, seat reservation, contact posting should only accept POSTs from logged-in users.
+* **Method checks:** reject non-POST on state-changing endpoints.
+* **Ownership checks:** for updates/deletes, confirm the row belongs to `current_user_id()` or the actor is admin.
+* **Discount application:** only admin can create/update discounts; customers only see the computed effect.
+
+**POST-only guard (pattern):**
+
+```php
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo 'Method Not Allowed';
+    exit;
+}
+```
+
+### Role Field & Defaults (DB)
+
+* `users.role` should be constrained to `'customer'` or `'admin'` with a safe default.
+
+**Example (MySQL):**
+
+```sql
+ALTER TABLE users
+  MODIFY role ENUM('customer','admin') NOT NULL DEFAULT 'customer';
+```
+
+> Promotion to admin is a **manual** DB change in this demo (keep it out of public UI).
+
+### Future Roles (optional)
+
+You can add roles later without breaking the guards (keep helpers generic):
+
+* **Barista/Staff:** can mark orders as `served`, view today’s orders; no product/discount access.
+* **Manager:** all admin rights except system settings.
+
+Pattern:
+
+```php
+function has_role(array $allowed): bool {
+    return in_array(current_role(), $allowed, true);
+}
+// Example: if (!has_role(['admin','manager'])) { deny(); }
+```
+
+### Testing Checklist
+
+* Guest cannot access `admin_*.php` or post to `give_discount.php` (403/redirect).
+* Customer can place orders and view **only their own** orders/reservations.
+* Admin sees all orders, contacts, transactions; can add products and configure discounts.
+* Direct URL access tests:
+
+  * Visiting `admin_dashboard.php` as guest → redirected to `login.php` (or 403 then link to login).
+  * Posting to `seats_to_reserve.php` without session → blocked.
+* Navbar reflects role correctly (Admin link only for admins).
+* After login, `session_regenerate_id(true)` is called; session fixation mitigated.
+
+### Security Notes (quick)
+
+* Always use **prepared statements**; never interpolate IDs or emails into SQL.
+* Escape any user-supplied output with `htmlspecialchars($value, ENT_QUOTES, 'UTF-8')`.
+* Consider CSRF tokens for state-changing forms if you extend this beyond coursework.
+* In production, suppress detailed errors; log instead (avoid leaking table/column names).
+
 
 ## Authentication Flow
 
