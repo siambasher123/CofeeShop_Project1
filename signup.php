@@ -2,26 +2,50 @@
 include_once 'config.php';
 
 if (isset($_POST['signup'])) {
-    $first_name = $_POST['first_name'];
-    $last_name  = $_POST['last_name'];
-    $email      = $_POST['email'];
-    $password   = password_hash($_POST['password'], PASSWORD_DEFAULT);
-    $phone      = $_POST['phone'];
-    $address    = $_POST['address'];
-    $role       = $_POST['role'];
+    $first_name = trim($_POST['first_name'] ?? '');
+    $last_name  = trim($_POST['last_name'] ?? '');
+    $email      = trim($_POST['email'] ?? '');
+    $password   = $_POST['password'] ?? '';
+    $phone      = trim($_POST['phone'] ?? '');
+    $address    = trim($_POST['address'] ?? '');
+    $role       = 'user';
 
-    $check = $conn->query("SELECT * FROM users WHERE email='$email'");
-
-    if ($check->num_rows > 0) {
-        $error = "Email already registered. Please login.";
+    if ($first_name === '' || $last_name === '' || $email === '' || $password === '') {
+        $error = "Please fill in all required fields.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Please enter a valid email address.";
+    } elseif (strlen($password) < 6) {
+        $error = "Password must be at least 6 characters.";
     } else {
-        $sql = "INSERT INTO users (first_name,last_name,email,password,phone,address,role)
-                VALUES ('$first_name','$last_name','$email','$password','$phone','$address','$role')";
-        if ($conn->query($sql) === TRUE) {
-            echo "<script>alert('Signup successful! Please login.'); window.location='login.php';</script>";
-            exit();
+        $checkStmt = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+        if (!$checkStmt) {
+            $error = "Unexpected error. Please try again later.";
         } else {
-            $error = "Error: " . $conn->error;
+            $checkStmt->bind_param("s", $email);
+            $checkStmt->execute();
+            $checkStmt->store_result();
+
+            if ($checkStmt->num_rows > 0) {
+                $error = "Email already registered. Please login.";
+                $checkStmt->close();
+            } else {
+                $checkStmt->close();
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                $insertStmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password, phone, address, role) VALUES (?, ?, ?, ?, ?, ?, ?)");
+
+                if (!$insertStmt) {
+                    $error = "Unexpected error. Please try again later.";
+                } else {
+                    $insertStmt->bind_param("sssssss", $first_name, $last_name, $email, $hashedPassword, $phone, $address, $role);
+                    if ($insertStmt->execute()) {
+                        echo "<script>alert('Signup successful! Please login.'); window.location='login.php';</script>";
+                        $insertStmt->close();
+                        exit();
+                    }
+                    $error = "Unable to complete signup. Please try again.";
+                    $insertStmt->close();
+                }
+            }
         }
     }
 }
@@ -42,7 +66,9 @@ if (isset($_POST['signup'])) {
         <div class="row justify-content-center">
             <div class="col-md-6 bg-white p-4 shadow rounded">
                 <h3 class="text-center mb-4">Signup</h3>
-                <?php if (isset($error)) echo '<div class="alert alert-danger">' . $error . '</div>'; ?>
+                <?php if (isset($error)): ?>
+                    <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+                <?php endif; ?>
                 <form method="POST">
                     <div class="row mb-3">
                         <div class="col">
@@ -65,11 +91,7 @@ if (isset($_POST['signup'])) {
                         <input type="text" name="address" class="form-control" placeholder="Address">
                     </div>
                     <div class="mb-3">
-                        <select name="role" class="form-select" required>
-                            <option value="">Select Role</option>
-                            <option value="user">User</option>
-                            <option value="admin">Admin</option>
-                        </select>
+                        <small class="text-muted">Accounts are created with customer access. Contact support for administrative roles.</small>
                     </div>
                     <button type="submit" name="signup" class="btn btn-warning w-100">Signup</button>
                     <p class="mt-3 text-center">Already have an account? <a href="login.php">Login</a></p>
