@@ -1,0 +1,113 @@
+@startuml Level_1_DFD
+' Coffee Shop Level 1 Data Flow Diagram
+skinparam defaultFontName "Arial"
+skinparam defaultFontSize 14
+skinparam dpi 150
+skinparam shadowing false
+skinparam nodesep 52
+skinparam ranksep 64
+skinparam actorStyle hollow
+skinparam wrapWidth 160
+skinparam rectangle {
+  BackgroundColor #FEF5E7
+  BorderColor #6F4E37
+  RoundCorner 10
+  BorderThickness 1.1
+}
+skinparam database {
+  BackgroundColor #FFFDF7
+  BorderColor #6F4E37
+  BorderThickness 1
+}
+left to right direction
+
+actor "Customer" as Customer
+actor "Administrator" as Admin
+actor "Payment Gateway" as Payment
+actor "Notification Service" as Notifier
+
+Customer -[hidden]-> Admin
+Payment -[hidden]-> Notifier
+
+database "User\nAccounts" as UserDB
+database "Product\nCatalog" as ProductDB
+database "Cart\nContents" as CartDB
+database "Order\nLedger" as OrderDB
+database "Order\nItems" as OrderItemDB
+database "Reservation\nSchedule" as ReservationDB
+database "Seat\nMap" as SeatMapDB
+database "Payment\nLedger" as PaymentDB
+database "Support\nInbox" as ContactDB
+
+UserDB -[hidden]-> ProductDB
+ProductDB -[hidden]-> CartDB
+CartDB -[hidden]-> OrderDB
+OrderDB -[hidden]-> OrderItemDB
+OrderItemDB -[hidden]-> ReservationDB
+ReservationDB -[hidden]-> SeatMapDB
+SeatMapDB -[hidden]-> PaymentDB
+PaymentDB -[hidden]-> ContactDB
+
+rectangle "Coffee Shop Information System" as System {
+  rectangle "P1 Account &\nSession Management" as P1
+  rectangle "P2 Catalog &\nCart Services" as P2
+  rectangle "P3 Checkout &\nOrder Processing" as P3
+  rectangle "P4 Reservation\nDesk" as P4
+  rectangle "P5 Support &\nNotifications" as P5
+  rectangle "P6 Payment &\nSettlement" as P6
+}
+
+Customer --> P1 : Signup / Login Data
+P1 --> Customer : Credential Status
+P1 --> UserDB : Create / Update Profiles
+UserDB --> P1 : Account Records
+
+Customer --> P2 : Menu Browsing\nCart Updates
+P2 --> ProductDB : Product Queries
+ProductDB --> P2 : Catalog Data
+P2 --> CartDB : Store Cart Snapshot
+CartDB --> P2 : Saved Cart Items
+P2 --> Customer : Menu & Cart Views
+
+P2 --> P3 : Checkout Payload
+Customer --> P3 : Delivery /\nPickup Choices
+P3 -down-> OrderDB : Create /\nUpdate Orders
+P3 -down-> OrderItemDB : Persist\nLine Items
+OrderDB -up-> P3 : Order Status &\nTotals
+P3 --> Customer : Order Summary
+P3 --> P6 : Payment Intent
+
+Customer --> P4 : Seat Requests
+P4 --> ReservationDB : Maintain Bookings
+P4 --> SeatMapDB : Hold Seats
+SeatMapDB --> P4 : Seat Availability
+P4 --> Customer : Reservation Confirmation
+
+Customer --> P5 : Contact Message
+P5 --> ContactDB : Store /\nUpdate Tickets
+P5 --> Notifier : Support Notifications
+Notifier --> Customer : Acknowledgements
+
+Admin --> P2 : Catalog Maintenance\nInventory Counts
+P2 --> ProductDB : Catalog Changes
+
+Admin --> P3 : Fulfillment Updates
+P3 --> OrderDB : Update Status
+OrderDB --> Admin : Order Queue
+
+Admin --> P4 : Schedule Adjustments
+P4 --> ReservationDB : Update Allocation
+
+Admin --> P5 : Respond to Tickets\nConfigure Alerts
+P5 --> ContactDB : Resolution Notes
+Notifier --> Admin : Exception Alerts
+
+P6 --> Payment : Authorization Request
+Payment --> P6 : Authorization Result
+P6 --> PaymentDB : Record Transaction
+PaymentDB --> P6 : Settlement Status
+P6 --> P3 : Payment Outcome
+P6 --> Notifier : Receipt Payload
+Notifier --> Customer : Payment Receipt
+
+@enduml
