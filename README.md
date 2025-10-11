@@ -1062,7 +1062,223 @@ DELETE FROM users        WHERE email IN ('alice@coffee.test','bob@coffee.test','
 
 ## User Roles & Permissions
 
-<!-- TODO: Customer vs Admin capabilities; who can access which page. 15–25 lines. -->
+This app uses **session-based identity** with a simple role model:
+
+* **Guest** — not logged in (no `$_SESSION['user_id']`).
+* **Customer** — logged in user (`$_SESSION['role'] === 'customer'`).
+* **Admin** — elevated user (`$_SESSION['role'] === 'admin'`).
+
+Identity keys set on successful login:
+
+```php
+$_SESSION['user_id'] = $user['id'];
+$_SESSION['role']    = $user['role']; // 'customer' | 'admin'
+// Good practice:
+session_regenerate_id(true); // prevent fixation after login
+```
+
+### Access Matrix (pages vs roles)
+
+| Page / Module                 | Guest |    Customer    |     Admin     |
+| ----------------------------- | :---: | :------------: | :-----------: |
+| `index.php` (home)            |   ✅   |        ✅       |       ✅       |
+| `about.php`                   |   ✅   |        ✅       |       ✅       |
+| `menu.php`                    |   ✅   |        ✅       |       ✅       |
+| `login.php`, `signup.php`     |   ✅   |        ➖       |       ➖       |
+| `logout.php`                  |   ➖   |        ✅       |       ✅       |
+| `cart.php` (view/update)      |   ✅*  |        ✅       |       ✅       |
+| `order_list.php`              |   ➖   | ✅ (own orders) | ✅ (all users) |
+| `seat_reservation.php`        |   ➖   |        ✅       |       ✅       |
+| `seats_to_reserve.php` (POST) |   ➖   |        ✅       |       ✅       |
+| `contact.php`                 |   ✅   |        ✅       |       ✅       |
+| `contact_list.php`            |   ➖   |        ➖       |       ✅       |
+| `admin_dashboard.php`         |   ➖   |        ➖       |       ✅       |
+| `add_products.php`            |   ➖   |        ➖       |       ✅       |
+| `give_discount.php`           |   ➖   |        ➖       |       ✅       |
+| `transaction_history.php`     |   ➖   |        ➖       |       ✅       |
+
+> *Cart behavior: Guests may stage items in session, but **checkout requires login** (recommended). If your current flow already requires login earlier, keep it strict.
+
+### Server-Side Authorization Helpers (drop-in)
+
+Create `auth.php` and include it at the top of pages that need protection.
+
+```php
+<?php
+// auth.php — common auth/authorization helpers
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+function current_user_id(): ?int {
+    return isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
+}
+
+function current_role(): string {
+    return $_SESSION['role'] ?? 'guest';
+}
+
+function is_logged_in(): bool {
+    return current_user_id() !== null;
+}
+
+function is_admin(): bool {
+    return current_role() === 'admin';
+}
+
+function require_login(): void {
+    if (!is_logged_in()) {
+        $_SESSION['flash_error'] = 'Please log in to continue.';
+        header('Location: login.php');
+        exit;
+    }
+}
+
+function require_admin(): void {
+    if (!is_admin()) {
+        http_response_code(403);
+        echo 'Forbidden (admin only).';
+        exit;
+    }
+}
+```
+
+#### Usage examples
+
+**Admin-only page (`admin_dashboard.php`, `add_products.php`, `give_discount.php`):**
+
+```php
+<?php
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
+require_login();
+require_admin();
+// ... rest of the page
+```
+
+**Customer-only page (e.g., `order_list.php`, `seat_reservation.php`):**
+
+```php
+<?php
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/auth.php';
+require_login();
+// Users see only their own data in the queries below
+```
+
+### Row-Level Permissions (enforced in SQL)
+
+Customers must only see/manipulate **their own** rows. Always filter by `current_user_id()`.
+
+**Orders (customer self-view):**
+
+```php
+$userId = current_user_id();
+$stmt = $mysqli->prepare('SELECT id, total, status, created_at FROM orders WHERE user_id = ? ORDER BY id DESC');
+$stmt->bind_param('i', $userId);
+$stmt->execute();
+```
+
+**Orders (admin all-view):**
+
+```php
+if (!is_admin()) { die('Forbidden'); }
+$stmt = $mysqli->prepare('SELECT o.id, u.email, o.total, o.status, o.created_at FROM orders o JOIN users u ON u.id = o.user_id ORDER BY o.id DESC');
+$stmt->execute();
+```
+
+**Reservations (customer self-view):**
+
+```php
+$userId = current_user_id();
+$stmt = $mysqli->prepare('SELECT id, seat_label, reserved_at, status FROM reservations WHERE user_id = ? ORDER BY id DESC');
+$stmt->bind_param('i', $userId);
+$stmt->execute();
+```
+
+> Never trust hidden inputs like `user_id` from forms — derive the acting user from `$_SESSION`.
+
+### UI Gating vs Server Gating
+
+* **UI gating:** Hide admin links in the navbar for non-admins (good UX).
+* **Server gating (required):** Admin pages must still call `require_admin()` to block direct URL access.
+
+**Navbar snippet (example):**
+
+```php
+<?php if (is_logged_in()): ?>
+  <?php if (is_admin()): ?><a href="admin_dashboard.php">Admin</a><?php endif; ?>
+  <a href="logout.php">Logout</a>
+<?php else: ?>
+  <a href="login.php">Login</a>
+<?php endif; ?>
+```
+
+### Form & Action Rules
+
+* **Mutations require auth:** checkout, seat reservation, contact posting should only accept POSTs from logged-in users.
+* **Method checks:** reject non-POST on state-changing endpoints.
+* **Ownership checks:** for updates/deletes, confirm the row belongs to `current_user_id()` or the actor is admin.
+* **Discount application:** only admin can create/update discounts; customers only see the computed effect.
+
+**POST-only guard (pattern):**
+
+```php
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo 'Method Not Allowed';
+    exit;
+}
+```
+
+### Role Field & Defaults (DB)
+
+* `users.role` should be constrained to `'customer'` or `'admin'` with a safe default.
+
+**Example (MySQL):**
+
+```sql
+ALTER TABLE users
+  MODIFY role ENUM('customer','admin') NOT NULL DEFAULT 'customer';
+```
+
+> Promotion to admin is a **manual** DB change in this demo (keep it out of public UI).
+
+### Future Roles (optional)
+
+You can add roles later without breaking the guards (keep helpers generic):
+
+* **Barista/Staff:** can mark orders as `served`, view today’s orders; no product/discount access.
+* **Manager:** all admin rights except system settings.
+
+Pattern:
+
+```php
+function has_role(array $allowed): bool {
+    return in_array(current_role(), $allowed, true);
+}
+// Example: if (!has_role(['admin','manager'])) { deny(); }
+```
+
+### Testing Checklist
+
+* Guest cannot access `admin_*.php` or post to `give_discount.php` (403/redirect).
+* Customer can place orders and view **only their own** orders/reservations.
+* Admin sees all orders, contacts, transactions; can add products and configure discounts.
+* Direct URL access tests:
+
+  * Visiting `admin_dashboard.php` as guest → redirected to `login.php` (or 403 then link to login).
+  * Posting to `seats_to_reserve.php` without session → blocked.
+* Navbar reflects role correctly (Admin link only for admins).
+* After login, `session_regenerate_id(true)` is called; session fixation mitigated.
+
+### Security Notes (quick)
+
+* Always use **prepared statements**; never interpolate IDs or emails into SQL.
+* Escape any user-supplied output with `htmlspecialchars($value, ENT_QUOTES, 'UTF-8')`.
+* Consider CSRF tokens for state-changing forms if you extend this beyond coursework.
+* In production, suppress detailed errors; log instead (avoid leaking table/column names).
+
 
 ## Authentication Flow
 
