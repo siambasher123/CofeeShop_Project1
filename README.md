@@ -49,7 +49,7 @@ This Information Systems Lab project delivers a PHP/MySQL portal that models the
 1. Clone the repository into your web server root (e.g., `htdocs` or `/var/www/html`).
 2. Import `mycoffeshop.sql` into MySQL (`coffeeshop` database by default).
 3. Update credentials in `config.php` to match your environment.
-4. Serve through Apache (XAMPP/LAMP) and visit `http://localhost/CoffeeShop_Project1`.
+4. Serve through Apache (XAMPP/LAMP) and visit `http://localhost/CofeeShop_Project1`.
 5. Log in with an existing admin user or register a new customer account.
 
 - Run `php -l <file>` to lint PHP scripts.
