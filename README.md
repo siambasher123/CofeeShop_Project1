@@ -475,7 +475,7 @@ $flashSuccess = $_SESSION['flash_success'] ?? null;
 $flashError   = $_SESSION['flash_error']   ?? null;
 unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 ?>
-```
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -499,7 +499,7 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
     <a href="login.php">Login</a>
   <?php endif; ?>
 </nav>
-```
+
 <?php if ($flashSuccess): ?>
   <div class="alert success"><?= htmlspecialchars($flashSuccess, ENT_QUOTES, 'UTF-8') ?></div>
 <?php endif; ?>
