@@ -544,6 +544,8 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 * `login.php` / `signup.php` — auth entry.
 * `admin_dashboard.php` — admin-only.
 
+```
+```
 ## Setup — Windows (XAMPP)
 
 ### Prerequisites
