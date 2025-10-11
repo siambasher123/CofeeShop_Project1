@@ -57,14 +57,15 @@ $contacts = $conn->query("SELECT * FROM contacts ORDER BY id DESC");
         <!-- Sidebar -->
         <div class="sidebar p-3">
             <h3 class="text-white text-center mb-4">Admin Panel</h3>
-            <a href="admin_dashboard.php">Dashboard</a>
-            <a href="add_products.php">Add Products</a>
-            <a href="inventory_list.php">Inventory List</a>
-            <a href="order_list.php">Order List</a>
-            <a href="transaction_history.php">Transaction History</a>
-            <a href="contact_list.php" class="active">Contact List</a>
-            <a href="logout.php">Logout</a>
-            <a href="index.php" class="mt-3 btn btn-warning w-100 text-center">Back to Homepage</a>
+        <a href="admin_dashboard.php">Dashboard</a>
+        <a href="add_products.php">Add Products</a>
+        <a href="order_list.php">Order List</a>
+        <a href="seats_to_reserve.php">Reservation</a> <!-- Added Reservation menu item -->
+        <a href="transaction_history.php">Transaction History</a>
+        <a href="contact_list.php" class="active">Contact List</a>
+        <a href="give_discount.php">Give Discount</a>
+        <a href="logout.php">Logout</a>
+        <a href="index.php" class="mt-3 btn btn-warning w-100 text-center">Back to Homepage</a>
         </div>
 
         <!-- Main content -->
