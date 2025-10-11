@@ -1,7 +1,5 @@
 # CoffeeShop— README
 
-> This README is designed to be grown **gradually** in many small, meaningful commits (docs-only). Each subsection below is a bite‑sized chunk you can complete and commit separately.
-
 ---
 
 ## Table of Contents
@@ -546,9 +544,6 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 * `login.php` / `signup.php` — auth entry.
 * `admin_dashboard.php` — admin-only.
 
-
-
-````md
 ## Setup — Windows (XAMPP)
 
 ### Prerequisites
