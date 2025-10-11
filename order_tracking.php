@@ -458,42 +458,18 @@ function render_order_card($conn, $order, $admin=false){
     </div>
 </nav>
 
-<section class="page-hero position-relative overflow-hidden">
-  <div class="container py-5">
-    <div class="row justify-content-center text-center text-white">
-      <div class="col-lg-8">
-        <h1 class="fw-bold display-5 mb-3">Track Your Coffee Order</h1>
-        <p class="lead mb-4">Enter your order code to see where your brew is right now ☕</p>
-        
-        <!-- Tracking form -->
-        <form class="d-flex justify-content-center align-items-center gap-2 flex-wrap" method="post" action="track_order.php">
-          <div class="input-group input-group-lg w-75 shadow-sm">
-            <span class="input-group-text bg-white border-0"><i class="bi bi-search text-secondary"></i></span>
-            <input type="text" class="form-control border-0" name="order_code" placeholder="Enter your order code..." required>
-          </div>
-          <button class="btn btn-custom btn-lg px-4">Track Now</button>
-        </form>
-
-        <!-- Optional PHP message -->
+<section class="page-hero">
+    <div class="container">
+        <h1 class="fw-bold">Track Your Coffee Order</h1>
+        <p class="lead">Enter your order code or sign in to see your recent orders.</p>
         <?php if($seed_message): ?>
-          <div class="alert alert-warning mt-4 d-inline-block shadow-sm py-2 px-4">
-            <?= e($seed_message) ?>
-          </div>
+            <div class="alert alert-warning d-inline-block mt-3 py-2 px-3"><?= e($seed_message) ?></div>
         <?php endif; ?>
-      </div>
     </div>
-  </div>
-
-  <!-- Decorative elements -->
-  <div class="position-absolute top-0 start-0 w-100 h-100" style="background: rgba(0,0,0,0.45);"></div>
-  <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1600&q=80" 
-       class="position-absolute top-0 start-0 w-100 h-100 object-fit-cover" alt="Coffee background" style="z-index:-2;">
 </section>
 
-
 <main class="container my-5">
-    <?php if(isset($_GET['token'])): ?> 
-
+    <?php if(isset($_GET['token'])): ?>
         <div class="alert alert-info"><i class="bi bi-shield-lock"></i> Admin-lite controls enabled for this view.</div>
     <?php endif; ?>
 
@@ -504,7 +480,7 @@ function render_order_card($conn, $order, $admin=false){
     <div class="row g-4">
         <div class="col-lg-5">
             <div class="card search-card shadow-sm">
-                <div class="card-body" >
+                <div class="card-body">
                     <h5 class="card-title mb-3">Find Your Order</h5>
                     <form class="needs-validation" novalidate>
                         <input type="hidden" name="track" value="1"/>
