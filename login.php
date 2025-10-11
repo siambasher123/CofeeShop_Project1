@@ -2,33 +2,39 @@
 include_once 'config.php'; // Include DB connection
 
 // Handle login
+$emailValue = '';
 if (isset($_POST['login'])) {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $emailValue = $email;
 
-    // Get user from database
-    $sql = "SELECT * FROM users WHERE email='$email'";
-    $result = $conn->query($sql);
-
-    if ($result->num_rows == 1) {
-        $user = $result->fetch_assoc();
-        if (password_verify($password, $user['password'])) {
-            // Save session
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['role'] = $user['role'];
-
-            // Redirect based on role
-            if ($user['role'] == 'admin') {
-                header("Location: admin_dashboard.php");
-            } else {
-                header("Location: index.php");
-            }
-            exit();
-        } else {
-            $error = "Invalid password.";
-        }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Please enter a valid email address.";
     } else {
-        $error = "Email not found. Please signup first.";
+        $stmt = $conn->prepare("SELECT id, password, role FROM users WHERE email = ?");
+        if ($stmt) {
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            if ($result && $result->num_rows === 1) {
+                $user = $result->fetch_assoc();
+                if (password_verify($password, $user['password'])) {
+                    $_SESSION['user_id'] = (int) $user['id'];
+                    $_SESSION['role'] = $user['role'];
+                    $stmt->close();
+
+                    $destination = $user['role'] === 'admin' ? 'admin_dashboard.php' : 'index.php';
+                    header("Location: {$destination}");
+                    exit();
+                }
+            }
+
+            $stmt->close();
+            $error = "Incorrect email or password.";
+        } else {
+            $error = "Unable to process login right now. Please try again later.";
+        }
     }
 }
 ?>
@@ -75,11 +81,13 @@ if (isset($_POST['login'])) {
                     <h3 class="text-center mb-4">Login</h3>
 
                     <!-- Display error if any -->
-                    <?php if (isset($error)) echo '<div class="alert alert-danger">' . $error . '</div>'; ?>
+                    <?php if (isset($error)): ?>
+                        <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+                    <?php endif; ?>
 
                     <form method="POST">
                         <div class="mb-3">
-                            <input type="email" name="email" class="form-control" placeholder="Email" required>
+                            <input type="email" name="email" class="form-control" placeholder="Email" value="<?php echo htmlspecialchars($emailValue); ?>" required>
                         </div>
                         <div class="mb-3">
                             <input type="password" name="password" class="form-control" placeholder="Password" required>
