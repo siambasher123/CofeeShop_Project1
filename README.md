@@ -1293,7 +1293,7 @@ This app uses **cookie-based PHP sessions** for identity. After a successful log
 5. **Logout** (`logout.php`): unsets session keys, destroys session (and cookie), redirects to home.
 
 ### Sequence diagram (login)
-
+(paste the following code on mermaid)
 ```
 sequenceDiagram
   participant B as Browser
@@ -1560,10 +1560,260 @@ $hash      = hash('sha256', $validator);
 
 
 
-
 ## Business Flows
 
-<!-- TODO: Write out flows: "Browse → add to cart → checkout"; "Reserve seats → confirm"; with bullet steps. 20–40 lines. -->
+This section describes end‑to‑end flows as they actually run through the current pages and tables. Each flow lists **Actors**, **Preconditions**, **Steps**, **Data writes**, and **Postconditions** so you can trace logic and test reliably.
+
+---
+
+### 1) Browse → Add to Cart → Checkout → Order Created
+
+**Actors:** Guest, Customer, Admin (as customer for purchase)
+
+**Preconditions:**
+
+* `products` table has at least one row.
+* Session started on every page.
+
+**Steps:**
+
+1. **Guest/Customer** visits `menu.php` → page queries `SELECT id,name,price FROM products WHERE status='available'`.
+2. Click **Add to Cart** on an item → `cart.php` receives `POST product_id, qty`.
+3. Server validates `product_id` exists and `qty ≥ 1`.
+4. Server **adds/updates** item in `$_SESSION['cart']` (hash: `product_id => qty`).
+5. Redirect (PRG) back to `cart.php` with `flash_success`.
+6. **Cart view** shows line items, unit price, **subtotal** = Σ(`qty × unit_price`).
+7. If a discount is active (see Flow 4), compute **discount_amount** and **grand_total**.
+8. On **Checkout**, require login:
+
+   * If not logged in → `require_login()` → redirect to `login.php`.
+   * If logged in → proceed.
+9. Server begins order write:
+
+   * (a) Insert row into `orders(user_id,total,status='pending',created_at)`.
+   * (b) Get `order_id = LAST_INSERT_ID()`.
+   * (c) For each cart line, insert `order_items(order_id,product_id,qty,unit_price)`.
+10. Clear `$_SESSION['cart']` and set `flash_success`.
+11. Redirect to `order_list.php` showing the new order.
+
+**Data writes:** `orders`, `order_items` (+ optional `transactions`, see Flow 7).
+
+**Postconditions:**
+
+* New **pending** order exists and is visible to the customer in `order_list.php`.
+* Admin can see the order in dashboard and update status.
+
+**Edge cases:**
+
+* Product removed/unavailable during checkout → server re‑validates; if missing, drop that line and recompute; show `flash_error`.
+* Negative or zero qty → reject and show error.
+
+---
+
+### 2) Order Status Lifecycle (Admin)
+
+**Actors:** Admin
+
+**Statuses:** `pending` → `served` → (`cancelled` optional)
+
+**Steps:**
+
+1. Admin opens `admin_dashboard.php` and/or a simple order list page.
+2. Admin selects an order and updates status to **served** once it is fulfilled.
+3. Optional: set **cancelled** if an order is voided before serving.
+
+**Data writes:** `orders.status` (`UPDATE orders SET status=? WHERE id=?`).
+
+**Postconditions:**
+
+* Customer sees updated status in `order_list.php`.
+
+**Edge cases:**
+
+* Only **admin** can change status. Enforce with `require_admin()`.
+
+---
+
+### 3) Seat Reservation → Confirmation
+
+**Actors:** Customer (must be logged in), Admin (overrides allowed)
+
+**Preconditions:**
+
+* `reservations` table exists.
+* Seat labels are agreed (e.g., `A1..A10, B1..B10`).
+
+**Steps:**
+
+1. Customer opens `seat_reservation.php` → server renders available seats.
+2. Customer selects seat(s) and submits to `seats_to_reserve.php` with `POST seat_label` (or multiple).
+3. Server validates login (`require_login()`), checks seat availability:
+
+   * `SELECT 1 FROM reservations WHERE seat_label=? AND status IN ('pending','confirmed')`.
+4. If free → insert `reservations(user_id,seat_label,reserved_at=NOW(),status='confirmed')`.
+5. Set `flash_success` and redirect to `seat_reservation.php` or a confirmation page.
+
+**Data writes:** `reservations`.
+
+**Postconditions:**
+
+* Seat appears as **unavailable** to others.
+* Admin can view all reservations.
+
+**Edge cases:**
+
+* Race condition (two users pick same seat): second insert fails; show `flash_error` and refresh availability.
+* If your schema has `seat_id` FK instead of `seat_label`, adjust queries accordingly.
+
+---
+
+### 4) Discount Definition → Price Application
+
+**Actors:** Admin (define), Customer (see effect)
+
+**Preconditions:**
+
+* `discounts` table exists with fields: `type('flat'|'percent')`, `value`, `active_from`, `active_to`.
+
+**Steps (Admin):**
+
+1. Admin opens `give_discount.php`.
+2. Choose **type**: `percent` or `flat`.
+3. Enter **value** (e.g., 10% or 50.00), and optional active window.
+4. Save → insert/update row in `discounts`.
+
+**Steps (Customer):**
+
+1. On `cart.php`, server reads the **current active** discount:
+
+   * `SELECT type,value FROM discounts WHERE CURDATE() BETWEEN active_from AND active_to ORDER BY id DESC LIMIT 1`.
+2. Compute `discount_amount`:
+
+   * `percent`: `subtotal × (value/100)`
+   * `flat`: `MIN(value, subtotal)`
+3. Show **Discount** and **Grand Total** (= `subtotal - discount_amount`).
+4. Store the final total to `orders.total` during checkout.
+
+**Edge cases:**
+
+* No active discount → show no discount line; proceed with subtotal.
+* Multiple discounts → pick the last/priority one or define a rule; stacking is **not** supported by default.
+
+---
+
+### 5) Contact Us → Admin Inbox
+
+**Actors:** Guest/Customer (submit), Admin (review)
+
+**Steps:**
+
+1. User opens `contact.php`, fills `subject` + `message` (and email if guest).
+2. Server validates inputs; if logged in, sets `user_id`; else `NULL`.
+3. Insert row: `contacts(user_id,subject,message,created_at)`.
+4. Set `flash_success` and redirect to `contact.php`.
+5. Admin views `contact_list.php` to process messages.
+
+**Edge cases:**
+
+* Rate‑limit large volumes; trim overly long messages on server side.
+
+---
+
+### 6) Admin: Add/Edit Products
+
+**Actors:** Admin
+
+**Steps:**
+
+1. Admin opens `add_products.php`.
+2. For **create**: POST `name, price, status` → insert into `products`.
+3. For **edit**: POST `id, name, price, status` → update row.
+4. Redirect with `flash_success` back to the listing or same page.
+
+**Edge cases:**
+
+* Price must be numeric and ≥ 0.
+* Name must be unique (optional UNIQUE index helps).
+
+---
+
+### 7) Transaction Logging (optional demo)
+
+**Actors:** System (on order completion), Admin (review)
+
+**Steps:**
+
+1. After checkout or on admin mark‑as‑paid, insert a `transactions` row:
+
+   * `transactions(user_id,amount,method,status,created_at)`.
+2. `transaction_history.php` lists all entries for admin.
+
+**Edge cases:**
+
+* If payments are not integrated, method can be `'cash'|'card'|'bkash'` for demo.
+
+---
+
+### 8) Authentication Paths Tied to Business Logic
+
+**Guest paths:**
+
+* May browse `index.php`, `menu.php`, `about.php`, `contact.php`.
+* Can stage a cart in session, but **cannot** checkout.
+
+**Customer paths:**
+
+* Full cart + checkout; own orders/reservations visible only to self.
+
+**Admin paths:**
+
+* All of the above + dashboard, product/discount CRUD, contact inbox, transactions.
+
+---
+
+### 9) Failure & Recovery Patterns (PRG everywhere)
+
+**Validation failure:**
+
+* Set `$_SESSION['flash_error']` and `header('Location: <form page>')`.
+
+**Success:**
+
+* Set `$_SESSION['flash_success']` and redirect to the canonical listing page.
+
+**DB errors (dev):**
+
+* Show message if `APP_ENV==='local'`.
+
+**DB errors (prod):**
+
+* Log; show generic error to the user.
+
+---
+
+### 10) Manual Test Scripts (happy paths)
+
+**Place an order:**
+
+1. Login as `alice@coffee.test` (password `password`).
+2. Add **Latte ×2** + **Blueberry Muffin ×1**.
+3. Checkout → expect `order_list.php` to show a new `pending` order with total = 470.00 (without discounts).
+
+**Apply discount:**
+
+1. Login as admin → create `percent=10` active today.
+2. Repeat the order above → expect a 10% discount line and total = 423.00.
+
+**Reserve a seat:**
+
+1. Logged in as Alice → reserve `A3`.
+2. Try reserving `A3` again as Bob → expect failure and error message.
+
+**Admin serve order:**
+
+1. Admin updates Alice’s order → status `served`.
+2. Alice sees updated status in `order_list.php`.
+
 
 ## Endpoints & Routes
 
