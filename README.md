@@ -408,8 +408,8 @@ index.php
 - Switch to **PDO** or a lightweight DAO later without breaking page contracts.
 - Move common layout/header/footer into `require`-able partials to reduce duplication.
 - Optional CSRF tokens can be added to forms for stronger protection.
-```
-```
+
+
 ## Folder & File Map
 
 **Important app files:**
@@ -423,7 +423,6 @@ index.php
 * `config.php`
 
 
-````md
 ### `index.php` — Landing / Entry
 
 **Purpose**
@@ -515,7 +514,7 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
 </body>
 </html>
-````
+```
 
 **Security & robustness notes**
 
