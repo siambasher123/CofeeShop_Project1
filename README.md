@@ -1369,11 +1369,538 @@ function has_role(array $allowed): bool {
 
 ## Authentication Flow
 
-<!-- TODO: Cookie vs session; session keys; remember-me (if any); logout invalidation. 15–30 lines. -->
+This app uses **cookie-based PHP sessions** for identity. After a successful login, PHP sets `PHPSESSID` in the browser, which maps to a server-side session file that stores `$_SESSION['user_id']` and `$_SESSION['role']`. Protected pages check those keys.
+
+### High-level overview
+
+1. **Guest visits** a public page → sees Login/Signup links.
+2. **Signup** (`signup.php`): validates inputs → hashes password → inserts row → logs in → redirects.
+3. **Login** (`login.php`): verifies credentials → regenerates session ID → sets session keys → redirects.
+4. **Protected pages** (orders, reservations, admin) call `require_login()` / `require_admin()`.
+5. **Logout** (`logout.php`): unsets session keys, destroys session (and cookie), redirects to home.
+
+### Sequence diagram (login)
+(paste the following code on mermaid)
+```
+sequenceDiagram
+  participant B as Browser
+  participant L as login.php
+  participant DB as MySQL
+
+  B->>L: POST email + password
+  L->>DB: SELECT id,password,role FROM users WHERE email = ?
+  DB-->>L: Row (or none)
+  alt Found & password_verify OK
+    L->>L: session_regenerate_id(true)
+    L->>B: Set-Cookie: PHPSESSID=...; HttpOnly; (Secure if HTTPS)
+    L->>B: 302 Redirect to index.php (flash_success)
+  else Not found / wrong password
+    L->>B: 302 Redirect back to login.php (flash_error)
+  end
+```
+
+---
+
+### Signup flow (`signup.php`)
+
+**Inputs (POST)**
+
+* `first_name`, `last_name`, `email`, `password`, `confirm_password` (adjust if your form differs).
+
+**Validation rules**
+
+* Required: all fields
+* Email: valid format and **unique** in `users.email`
+* Password: 6–64 chars (demo), `password === confirm_password`
+
+**Server steps**
+
+1. `session_start()`
+2. Read & trim inputs using `filter_input(INPUT_POST, ...)`
+3. Validate → on fail: set `$_SESSION['flash_error']` and redirect back (PRG)
+4. Hash: `$hash = password_hash($password, PASSWORD_DEFAULT)`
+5. Insert new row using **prepared statement**
+6. Auto-login: set `$_SESSION['user_id']`, `$_SESSION['role']='customer'`
+7. `session_regenerate_id(true)` and redirect to `index.php` or `menu.php`
+
+**Sample (mysqli)**
+
+```php
+<?php
+require_once __DIR__.'/config.php';
+session_start();
+
+$first = trim((string)($_POST['first_name'] ?? ''));
+$last  = trim((string)($_POST['last_name']  ?? ''));
+$email = trim((string)($_POST['email']      ?? ''));
+$pass  = (string)($_POST['password']        ?? '');
+$pass2 = (string)($_POST['confirm_password']?? '');
+
+if ($first === '' || $last === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || $pass === '' || $pass !== $pass2) {
+    $_SESSION['flash_error'] = 'Invalid signup data';
+    header('Location: signup.php');
+    exit;
+}
+
+$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+$mysqli->set_charset('utf8mb4');
+
+// unique email check
+$stmt = $mysqli->prepare('SELECT id FROM users WHERE email = ?');
+$stmt->bind_param('s', $email);
+$stmt->execute();
+if ($stmt->get_result()->fetch_assoc()) {
+    $_SESSION['flash_error'] = 'Email already registered';
+    header('Location: signup.php');
+    exit;
+}
+$stmt->close();
+
+$hash = password_hash($pass, PASSWORD_DEFAULT);
+$stmt = $mysqli->prepare('INSERT INTO users(first_name,last_name,email,password,role,created_at) VALUES(?,?,?,?,"customer",NOW())');
+$stmt->bind_param('ssss', $first, $last, $email, $hash);
+$stmt->execute();
+$userId = $stmt->insert_id;
+$stmt->close();
+
+// login session
+session_regenerate_id(true);
+$_SESSION['user_id'] = $userId;
+$_SESSION['role']    = 'customer';
+$_SESSION['flash_success'] = 'Welcome, '.$first.'!';
+header('Location: index.php');
+exit;
+```
+
+---
+
+### Login flow (`login.php`)
+
+**Inputs (POST)**
+
+* `email`, `password`
+
+**Server steps**
+
+1. `session_start()`
+2. Look up user by email (prepared SELECT)
+3. If found, call `password_verify($password, $row['password'])`
+4. On success: `session_regenerate_id(true)`; set `$_SESSION['user_id']` + `$_SESSION['role']`
+5. Set `flash_success` and redirect (PRG)
+6. On failure: set `flash_error` and redirect back to login form (PRG)
+
+**Sample (mysqli)**
+
+```php
+<?php
+require_once __DIR__.'/config.php';
+session_start();
+
+$email = trim((string)($_POST['email'] ?? ''));
+$pass  = (string)($_POST['password'] ?? '');
+
+if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $pass === '') {
+    $_SESSION['flash_error'] = 'Invalid credentials';
+    header('Location: login.php');
+    exit;
+}
+
+$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+$mysqli->set_charset('utf8mb4');
+
+$stmt = $mysqli->prepare('SELECT id, password, role, first_name FROM users WHERE email = ?');
+$stmt->bind_param('s', $email);
+$stmt->execute();
+$user = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+if (!$user || !password_verify($pass, $user['password'])) {
+    $_SESSION['flash_error'] = 'Email or password is incorrect';
+    header('Location: login.php');
+    exit;
+}
+
+session_regenerate_id(true);
+$_SESSION['user_id'] = (int)$user['id'];
+$_SESSION['role']    = $user['role'];
+$_SESSION['flash_success'] = 'Welcome back, '.htmlspecialchars($user['first_name'] ?? '');
+header('Location: index.php');
+exit;
+```
+
+> **Tip (rate limiting):** Keep a short-lived counter in `$_SESSION` or a DB table to slow down repeated failures, e.g., sleep 300–500ms after 5 bad attempts.
+
+---
+
+### Logout flow (`logout.php`)
+
+**Goal:** Invalidate session server-side and clear the cookie client-side.
+
+**Sample**
+
+```php
+<?php
+session_start();
+$_SESSION = [];
+if (ini_get('session.use_cookies')) {
+    $params = session_get_cookie_params();
+    setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+}
+session_destroy();
+header('Location: index.php');
+exit;
+```
+
+---
+
+### Session lifecycle & cookies
+
+* The browser holds **`PHPSESSID`**; the server holds session data (`$_SESSION`).
+* Closing the tab **does not always** delete the cookie; some browsers restore it across restarts.
+* Server expiry is controlled by `session.gc_maxlifetime` (e.g., 1440 seconds by default). If the session file still exists and the cookie remains, you appear still logged in.
+* To force shorter login windows in dev, lower `session.gc_maxlifetime` or call `session_destroy()` on logout (as above).
+
+**Optional cookie hardening (before `session_start()`):**
+
+```php
+session_set_cookie_params([
+  'lifetime' => 0,         // expires when browser closes (best-effort)
+  'path'     => '/',
+  'secure'   => !empty($_SERVER['HTTPS']),
+  'httponly' => true,
+  'samesite' => 'Lax',
+]);
+```
+
+---
+
+### Flash messages & PRG pattern
+
+* On any form submission, **never** render the result directly on POST.
+* Instead: set `$_SESSION['flash_success']` or `flash_error` → **redirect** → read & clear on the next GET.
+
+**Read & clear example (top of page):**
+
+```php
+$flashSuccess = $_SESSION['flash_success'] ?? null;
+$flashError   = $_SESSION['flash_error']   ?? null;
+unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+```
+
+---
+
+### Remember‑me (optional; off by default)
+
+For coursework simplicity, this project **does not** persist long-lived logins. If you add it:
+
+**Schema**
+
+```sql
+CREATE TABLE user_tokens (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  selector CHAR(12) NOT NULL UNIQUE,
+  validator_hash CHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  INDEX (user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+**Set cookie on login** (pseudocode)
+
+```php
+// generate selector + validator
+$selector  = bin2hex(random_bytes(6));
+$validator = bin2hex(random_bytes(32));
+$hash      = hash('sha256', $validator);
+// store selector + hash in DB with expiry
+// set cookie value: selector:validator (Base64) with 30d expiry
+```
+
+**On subsequent visits**
+
+```php
+// if no $_SESSION but remember-me cookie exists → parse selector:validator
+// fetch DB row by selector, compare hash_equals(hash('sha256', validator), validator_hash)
+// if OK and not expired → restore session + rotate token
+```
+
+> If you implement remember‑me, always **rotate** tokens and allow server-side revocation.
+
+---
+
+### Common failure cases
+
+* Wrong email/password → flash error + redirect back to login
+* Deleted user with stale session → guards treat as guest; protected pages redirect to login
+* Session fixation attempts → mitigated by `session_regenerate_id(true)` after login
+* Mixed HTTP/HTTPS → cookie `secure` flag must match the scheme or the cookie may not be sent
+
+### Testing checklist
+
+* **Signup**: creates row, hashes password, logs in, redirects with success message.
+* **Login**: correct creds → sets session + regenerates ID; wrong creds → error flash.
+* **Logout**: removes session data and cookie; navigating back doesn’t re-authenticate.
+* **Protected pages**: redirect guests; admins only see admin pages; customers only see their own data.
+* **Flash**: message shows once and clears on refresh.
+
+
 
 ## Business Flows
 
-<!-- TODO: Write out flows: "Browse → add to cart → checkout"; "Reserve seats → confirm"; with bullet steps. 20–40 lines. -->
+This section describes end‑to‑end flows as they actually run through the current pages and tables. Each flow lists **Actors**, **Preconditions**, **Steps**, **Data writes**, and **Postconditions** so you can trace logic and test reliably.
+
+---
+
+### 1) Browse → Add to Cart → Checkout → Order Created
+
+**Actors:** Guest, Customer, Admin (as customer for purchase)
+
+**Preconditions:**
+
+* `products` table has at least one row.
+* Session started on every page.
+
+**Steps:**
+
+1. **Guest/Customer** visits `menu.php` → page queries `SELECT id,name,price FROM products WHERE status='available'`.
+2. Click **Add to Cart** on an item → `cart.php` receives `POST product_id, qty`.
+3. Server validates `product_id` exists and `qty ≥ 1`.
+4. Server **adds/updates** item in `$_SESSION['cart']` (hash: `product_id => qty`).
+5. Redirect (PRG) back to `cart.php` with `flash_success`.
+6. **Cart view** shows line items, unit price, **subtotal** = Σ(`qty × unit_price`).
+7. If a discount is active (see Flow 4), compute **discount_amount** and **grand_total**.
+8. On **Checkout**, require login:
+
+   * If not logged in → `require_login()` → redirect to `login.php`.
+   * If logged in → proceed.
+9. Server begins order write:
+
+   * (a) Insert row into `orders(user_id,total,status='pending',created_at)`.
+   * (b) Get `order_id = LAST_INSERT_ID()`.
+   * (c) For each cart line, insert `order_items(order_id,product_id,qty,unit_price)`.
+10. Clear `$_SESSION['cart']` and set `flash_success`.
+11. Redirect to `order_list.php` showing the new order.
+
+**Data writes:** `orders`, `order_items` (+ optional `transactions`, see Flow 7).
+
+**Postconditions:**
+
+* New **pending** order exists and is visible to the customer in `order_list.php`.
+* Admin can see the order in dashboard and update status.
+
+**Edge cases:**
+
+* Product removed/unavailable during checkout → server re‑validates; if missing, drop that line and recompute; show `flash_error`.
+* Negative or zero qty → reject and show error.
+
+---
+
+### 2) Order Status Lifecycle (Admin)
+
+**Actors:** Admin
+
+**Statuses:** `pending` → `served` → (`cancelled` optional)
+
+**Steps:**
+
+1. Admin opens `admin_dashboard.php` and/or a simple order list page.
+2. Admin selects an order and updates status to **served** once it is fulfilled.
+3. Optional: set **cancelled** if an order is voided before serving.
+
+**Data writes:** `orders.status` (`UPDATE orders SET status=? WHERE id=?`).
+
+**Postconditions:**
+
+* Customer sees updated status in `order_list.php`.
+
+**Edge cases:**
+
+* Only **admin** can change status. Enforce with `require_admin()`.
+
+---
+
+### 3) Seat Reservation → Confirmation
+
+**Actors:** Customer (must be logged in), Admin (overrides allowed)
+
+**Preconditions:**
+
+* `reservations` table exists.
+* Seat labels are agreed (e.g., `A1..A10, B1..B10`).
+
+**Steps:**
+
+1. Customer opens `seat_reservation.php` → server renders available seats.
+2. Customer selects seat(s) and submits to `seats_to_reserve.php` with `POST seat_label` (or multiple).
+3. Server validates login (`require_login()`), checks seat availability:
+
+   * `SELECT 1 FROM reservations WHERE seat_label=? AND status IN ('pending','confirmed')`.
+4. If free → insert `reservations(user_id,seat_label,reserved_at=NOW(),status='confirmed')`.
+5. Set `flash_success` and redirect to `seat_reservation.php` or a confirmation page.
+
+**Data writes:** `reservations`.
+
+**Postconditions:**
+
+* Seat appears as **unavailable** to others.
+* Admin can view all reservations.
+
+**Edge cases:**
+
+* Race condition (two users pick same seat): second insert fails; show `flash_error` and refresh availability.
+* If your schema has `seat_id` FK instead of `seat_label`, adjust queries accordingly.
+
+---
+
+### 4) Discount Definition → Price Application
+
+**Actors:** Admin (define), Customer (see effect)
+
+**Preconditions:**
+
+* `discounts` table exists with fields: `type('flat'|'percent')`, `value`, `active_from`, `active_to`.
+
+**Steps (Admin):**
+
+1. Admin opens `give_discount.php`.
+2. Choose **type**: `percent` or `flat`.
+3. Enter **value** (e.g., 10% or 50.00), and optional active window.
+4. Save → insert/update row in `discounts`.
+
+**Steps (Customer):**
+
+1. On `cart.php`, server reads the **current active** discount:
+
+   * `SELECT type,value FROM discounts WHERE CURDATE() BETWEEN active_from AND active_to ORDER BY id DESC LIMIT 1`.
+2. Compute `discount_amount`:
+
+   * `percent`: `subtotal × (value/100)`
+   * `flat`: `MIN(value, subtotal)`
+3. Show **Discount** and **Grand Total** (= `subtotal - discount_amount`).
+4. Store the final total to `orders.total` during checkout.
+
+**Edge cases:**
+
+* No active discount → show no discount line; proceed with subtotal.
+* Multiple discounts → pick the last/priority one or define a rule; stacking is **not** supported by default.
+
+---
+
+### 5) Contact Us → Admin Inbox
+
+**Actors:** Guest/Customer (submit), Admin (review)
+
+**Steps:**
+
+1. User opens `contact.php`, fills `subject` + `message` (and email if guest).
+2. Server validates inputs; if logged in, sets `user_id`; else `NULL`.
+3. Insert row: `contacts(user_id,subject,message,created_at)`.
+4. Set `flash_success` and redirect to `contact.php`.
+5. Admin views `contact_list.php` to process messages.
+
+**Edge cases:**
+
+* Rate‑limit large volumes; trim overly long messages on server side.
+
+---
+
+### 6) Admin: Add/Edit Products
+
+**Actors:** Admin
+
+**Steps:**
+
+1. Admin opens `add_products.php`.
+2. For **create**: POST `name, price, status` → insert into `products`.
+3. For **edit**: POST `id, name, price, status` → update row.
+4. Redirect with `flash_success` back to the listing or same page.
+
+**Edge cases:**
+
+* Price must be numeric and ≥ 0.
+* Name must be unique (optional UNIQUE index helps).
+
+---
+
+### 7) Transaction Logging (optional demo)
+
+**Actors:** System (on order completion), Admin (review)
+
+**Steps:**
+
+1. After checkout or on admin mark‑as‑paid, insert a `transactions` row:
+
+   * `transactions(user_id,amount,method,status,created_at)`.
+2. `transaction_history.php` lists all entries for admin.
+
+**Edge cases:**
+
+* If payments are not integrated, method can be `'cash'|'card'|'bkash'` for demo.
+
+---
+
+### 8) Authentication Paths Tied to Business Logic
+
+**Guest paths:**
+
+* May browse `index.php`, `menu.php`, `about.php`, `contact.php`.
+* Can stage a cart in session, but **cannot** checkout.
+
+**Customer paths:**
+
+* Full cart + checkout; own orders/reservations visible only to self.
+
+**Admin paths:**
+
+* All of the above + dashboard, product/discount CRUD, contact inbox, transactions.
+
+---
+
+### 9) Failure & Recovery Patterns (PRG everywhere)
+
+**Validation failure:**
+
+* Set `$_SESSION['flash_error']` and `header('Location: <form page>')`.
+
+**Success:**
+
+* Set `$_SESSION['flash_success']` and redirect to the canonical listing page.
+
+**DB errors (dev):**
+
+* Show message if `APP_ENV==='local'`.
+
+**DB errors (prod):**
+
+* Log; show generic error to the user.
+
+---
+
+### 10) Manual Test Scripts (happy paths)
+
+**Place an order:**
+
+1. Login as `alice@coffee.test` (password `password`).
+2. Add **Latte ×2** + **Blueberry Muffin ×1**.
+3. Checkout → expect `order_list.php` to show a new `pending` order with total = 470.00 (without discounts).
+
+**Apply discount:**
+
+1. Login as admin → create `percent=10` active today.
+2. Repeat the order above → expect a 10% discount line and total = 423.00.
+
+**Reserve a seat:**
+
+1. Logged in as Alice → reserve `A3`.
+2. Try reserving `A3` again as Bob → expect failure and error message.
+
+**Admin serve order:**
+
+1. Admin updates Alice’s order → status `served`.
+2. Alice sees updated status in `order_list.php`.
+
 
 ## Endpoints & Routes
 
