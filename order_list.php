@@ -8,31 +8,74 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
-// Handle Yes/No action
-if (isset($_GET['id']) && isset($_GET['action'])) {
-    $order_id = intval($_GET['id']);
-    $action = $_GET['action'];
+// Handle Yes/No action via POST for safety against accidental triggers
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id'], $_POST['action'])) {
+    $order_id = intval($_POST['order_id']);
+    $action = $_POST['action'];
 
-    if ($action == 'yes') {
-        // Move order to transaction1
-        $order = $conn->query("SELECT * FROM orders WHERE id=$order_id")->fetch_assoc();
-        if ($order) {
-            $conn->query("INSERT INTO transaction1 (order_id, user_id, total, created_at) VALUES (
-                " . $order['id'] . ",
-                " . $order['user_id'] . ",
-                " . $order['total'] . ",
-                NOW()
-            )");
+    if ($action === 'yes') {
+        $orderStmt = $conn->prepare("SELECT id, user_id, total FROM orders WHERE id = ? LIMIT 1");
+        if ($orderStmt) {
+            $orderStmt->bind_param("i", $order_id);
+            $orderStmt->execute();
+            $result = $orderStmt->get_result();
+            $order = $result ? $result->fetch_assoc() : null;
+            $orderStmt->close();
 
-            // Mark order as processed
-            $conn->query("UPDATE orders SET status='processed' WHERE id=$order_id");
+            if ($order) {
+                $conn->begin_transaction();
+                try {
+                    $insertStmt = $conn->prepare("INSERT INTO transaction1 (order_id, user_id, total, created_at) VALUES (?, ?, ?, NOW())");
+                    $updateStmt = $conn->prepare("UPDATE orders SET status = 'processed' WHERE id = ?");
 
-            $_SESSION['message'] = "Order taken!";
+                    if (!$insertStmt || !$updateStmt) {
+                        throw new \Exception("Failed to prepare statements.");
+                    }
+
+                    $orderId = (int) $order['id'];
+                    $userId = (int) $order['user_id'];
+                    $total = (float) $order['total'];
+
+                    $insertStmt->bind_param("iid", $orderId, $userId, $total);
+                    $updateStmt->bind_param("i", $orderId);
+
+                    if (!$insertStmt->execute() || !$updateStmt->execute()) {
+                        throw new \Exception("Failed to update order.");
+                    }
+
+                    $conn->commit();
+                    $_SESSION['message'] = "Order recorded successfully.";
+                    $_SESSION['message_type'] = "success";
+                } catch (\Exception $e) {
+                    $conn->rollback();
+                    $_SESSION['message'] = "Unable to record order. Please try again.";
+                    $_SESSION['message_type'] = "danger";
+                } finally {
+                    if (isset($insertStmt) && $insertStmt instanceof \mysqli_stmt) {
+                        $insertStmt->close();
+                    }
+                    if (isset($updateStmt) && $updateStmt instanceof \mysqli_stmt) {
+                        $updateStmt->close();
+                    }
+                }
+            } else {
+                $_SESSION['message'] = "Order not found or already processed.";
+                $_SESSION['message_type'] = "warning";
+            }
         }
-    } elseif ($action == 'no') {
-        // Safe to delete completely
-        $conn->query("DELETE FROM orders WHERE id=$order_id");
-        $_SESSION['message'] = "Order removed!";
+    } elseif ($action === 'no') {
+        $deleteStmt = $conn->prepare("DELETE FROM orders WHERE id = ?");
+        if ($deleteStmt) {
+            $deleteStmt->bind_param("i", $order_id);
+            if ($deleteStmt->execute()) {
+                $_SESSION['message'] = "Order removed.";
+                $_SESSION['message_type'] = "success";
+            } else {
+                $_SESSION['message'] = "Unable to remove order.";
+                $_SESSION['message_type'] = "danger";
+            }
+            $deleteStmt->close();
+        }
     }
 
     header("Location: order_list.php");
@@ -113,8 +156,13 @@ $orders = $conn->query("
             <h2>Order List</h2>
 
             <?php if (isset($_SESSION['message'])): ?>
-                <div class="alert alert-success alert-custom"><?php echo $_SESSION['message'];
-                                                                unset($_SESSION['message']); ?></div>
+                <?php $messageType = $_SESSION['message_type'] ?? 'info'; ?>
+                <div class="alert alert-<?php echo htmlspecialchars($messageType); ?> alert-custom">
+                    <?php echo htmlspecialchars($_SESSION['message']); ?>
+                </div>
+                <?php
+                unset($_SESSION['message'], $_SESSION['message_type']);
+                ?>
             <?php endif; ?>
 
             <table class="table table-bordered table-striped">
@@ -130,12 +178,20 @@ $orders = $conn->query("
                     <?php if ($orders->num_rows > 0): ?>
                         <?php while ($order = $orders->fetch_assoc()): ?>
                             <tr>
-                                <td><?php echo $order['id']; ?></td>
-                                <td><?php echo $order['first_name'] . ' ' . $order['last_name']; ?></td>
-                                <td>$<?php echo $order['total']; ?></td>
-                                <td>
-                                    <a href="order_list.php?id=<?php echo $order['id']; ?>&action=yes" class="btn btn-success btn-sm">Yes</a>
-                                    <a href="order_list.php?id=<?php echo $order['id']; ?>&action=no" class="btn btn-danger btn-sm">No</a>
+                                <td><?php echo htmlspecialchars($order['id']); ?></td>
+                                <td><?php echo htmlspecialchars($order['first_name'] . ' ' . $order['last_name']); ?></td>
+                                <td>$<?php echo number_format((float) $order['total'], 2); ?></td>
+                                <td class="d-flex gap-2">
+                                    <form method="post" class="d-inline">
+                                        <input type="hidden" name="order_id" value="<?php echo htmlspecialchars($order['id']); ?>">
+                                        <input type="hidden" name="action" value="yes">
+                                        <button type="submit" class="btn btn-success btn-sm">Yes</button>
+                                    </form>
+                                    <form method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to remove this order?');">
+                                        <input type="hidden" name="order_id" value="<?php echo htmlspecialchars($order['id']); ?>">
+                                        <input type="hidden" name="action" value="no">
+                                        <button type="submit" class="btn btn-danger btn-sm">No</button>
+                                    </form>
                                 </td>
                             </tr>
                         <?php endwhile; ?>
