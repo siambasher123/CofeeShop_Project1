@@ -1282,7 +1282,284 @@ function has_role(array $allowed): bool {
 
 ## Authentication Flow
 
-<!-- TODO: Cookie vs session; session keys; remember-me (if any); logout invalidation. 15–30 lines. -->
+This app uses **cookie-based PHP sessions** for identity. After a successful login, PHP sets `PHPSESSID` in the browser, which maps to a server-side session file that stores `$_SESSION['user_id']` and `$_SESSION['role']`. Protected pages check those keys.
+
+### High-level overview
+
+1. **Guest visits** a public page → sees Login/Signup links.
+2. **Signup** (`signup.php`): validates inputs → hashes password → inserts row → logs in → redirects.
+3. **Login** (`login.php`): verifies credentials → regenerates session ID → sets session keys → redirects.
+4. **Protected pages** (orders, reservations, admin) call `require_login()` / `require_admin()`.
+5. **Logout** (`logout.php`): unsets session keys, destroys session (and cookie), redirects to home.
+
+### Sequence diagram (login)
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant L as login.php
+  participant DB as MySQL
+
+  B->>L: POST email + password
+  L->>DB: SELECT id,password,role FROM users WHERE email = ?
+  DB-->>L: Row (or none)
+  alt Found & password_verify OK
+    L->>L: session_regenerate_id(true)
+    L->>B: Set-Cookie: PHPSESSID=...; HttpOnly; (Secure if HTTPS)
+    L->>B: 302 Redirect to index.php (flash_success)
+  else Not found / wrong password
+    L->>B: 302 Redirect back to login.php (flash_error)
+  end
+```
+
+---
+
+### Signup flow (`signup.php`)
+
+**Inputs (POST)**
+
+* `first_name`, `last_name`, `email`, `password`, `confirm_password` (adjust if your form differs).
+
+**Validation rules**
+
+* Required: all fields
+* Email: valid format and **unique** in `users.email`
+* Password: 6–64 chars (demo), `password === confirm_password`
+
+**Server steps**
+
+1. `session_start()`
+2. Read & trim inputs using `filter_input(INPUT_POST, ...)`
+3. Validate → on fail: set `$_SESSION['flash_error']` and redirect back (PRG)
+4. Hash: `$hash = password_hash($password, PASSWORD_DEFAULT)`
+5. Insert new row using **prepared statement**
+6. Auto-login: set `$_SESSION['user_id']`, `$_SESSION['role']='customer'`
+7. `session_regenerate_id(true)` and redirect to `index.php` or `menu.php`
+
+**Sample (mysqli)**
+
+```php
+<?php
+require_once __DIR__.'/config.php';
+session_start();
+
+$first = trim((string)($_POST['first_name'] ?? ''));
+$last  = trim((string)($_POST['last_name']  ?? ''));
+$email = trim((string)($_POST['email']      ?? ''));
+$pass  = (string)($_POST['password']        ?? '');
+$pass2 = (string)($_POST['confirm_password']?? '');
+
+if ($first === '' || $last === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || $pass === '' || $pass !== $pass2) {
+    $_SESSION['flash_error'] = 'Invalid signup data';
+    header('Location: signup.php');
+    exit;
+}
+
+$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+$mysqli->set_charset('utf8mb4');
+
+// unique email check
+$stmt = $mysqli->prepare('SELECT id FROM users WHERE email = ?');
+$stmt->bind_param('s', $email);
+$stmt->execute();
+if ($stmt->get_result()->fetch_assoc()) {
+    $_SESSION['flash_error'] = 'Email already registered';
+    header('Location: signup.php');
+    exit;
+}
+$stmt->close();
+
+$hash = password_hash($pass, PASSWORD_DEFAULT);
+$stmt = $mysqli->prepare('INSERT INTO users(first_name,last_name,email,password,role,created_at) VALUES(?,?,?,?,"customer",NOW())');
+$stmt->bind_param('ssss', $first, $last, $email, $hash);
+$stmt->execute();
+$userId = $stmt->insert_id;
+$stmt->close();
+
+// login session
+session_regenerate_id(true);
+$_SESSION['user_id'] = $userId;
+$_SESSION['role']    = 'customer';
+$_SESSION['flash_success'] = 'Welcome, '.$first.'!';
+header('Location: index.php');
+exit;
+```
+
+---
+
+### Login flow (`login.php`)
+
+**Inputs (POST)**
+
+* `email`, `password`
+
+**Server steps**
+
+1. `session_start()`
+2. Look up user by email (prepared SELECT)
+3. If found, call `password_verify($password, $row['password'])`
+4. On success: `session_regenerate_id(true)`; set `$_SESSION['user_id']` + `$_SESSION['role']`
+5. Set `flash_success` and redirect (PRG)
+6. On failure: set `flash_error` and redirect back to login form (PRG)
+
+**Sample (mysqli)**
+
+```php
+<?php
+require_once __DIR__.'/config.php';
+session_start();
+
+$email = trim((string)($_POST['email'] ?? ''));
+$pass  = (string)($_POST['password'] ?? '');
+
+if (!filter_var($email, FILTER_VALIDATE_EMAIL) || $pass === '') {
+    $_SESSION['flash_error'] = 'Invalid credentials';
+    header('Location: login.php');
+    exit;
+}
+
+$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+$mysqli->set_charset('utf8mb4');
+
+$stmt = $mysqli->prepare('SELECT id, password, role, first_name FROM users WHERE email = ?');
+$stmt->bind_param('s', $email);
+$stmt->execute();
+$user = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+if (!$user || !password_verify($pass, $user['password'])) {
+    $_SESSION['flash_error'] = 'Email or password is incorrect';
+    header('Location: login.php');
+    exit;
+}
+
+session_regenerate_id(true);
+$_SESSION['user_id'] = (int)$user['id'];
+$_SESSION['role']    = $user['role'];
+$_SESSION['flash_success'] = 'Welcome back, '.htmlspecialchars($user['first_name'] ?? '');
+header('Location: index.php');
+exit;
+```
+
+> **Tip (rate limiting):** Keep a short-lived counter in `$_SESSION` or a DB table to slow down repeated failures, e.g., sleep 300–500ms after 5 bad attempts.
+
+---
+
+### Logout flow (`logout.php`)
+
+**Goal:** Invalidate session server-side and clear the cookie client-side.
+
+**Sample**
+
+```php
+<?php
+session_start();
+$_SESSION = [];
+if (ini_get('session.use_cookies')) {
+    $params = session_get_cookie_params();
+    setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+}
+session_destroy();
+header('Location: index.php');
+exit;
+```
+
+---
+
+### Session lifecycle & cookies
+
+* The browser holds **`PHPSESSID`**; the server holds session data (`$_SESSION`).
+* Closing the tab **does not always** delete the cookie; some browsers restore it across restarts.
+* Server expiry is controlled by `session.gc_maxlifetime` (e.g., 1440 seconds by default). If the session file still exists and the cookie remains, you appear still logged in.
+* To force shorter login windows in dev, lower `session.gc_maxlifetime` or call `session_destroy()` on logout (as above).
+
+**Optional cookie hardening (before `session_start()`):**
+
+```php
+session_set_cookie_params([
+  'lifetime' => 0,         // expires when browser closes (best-effort)
+  'path'     => '/',
+  'secure'   => !empty($_SERVER['HTTPS']),
+  'httponly' => true,
+  'samesite' => 'Lax',
+]);
+```
+
+---
+
+### Flash messages & PRG pattern
+
+* On any form submission, **never** render the result directly on POST.
+* Instead: set `$_SESSION['flash_success']` or `flash_error` → **redirect** → read & clear on the next GET.
+
+**Read & clear example (top of page):**
+
+```php
+$flashSuccess = $_SESSION['flash_success'] ?? null;
+$flashError   = $_SESSION['flash_error']   ?? null;
+unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+```
+
+---
+
+### Remember‑me (optional; off by default)
+
+For coursework simplicity, this project **does not** persist long-lived logins. If you add it:
+
+**Schema**
+
+```sql
+CREATE TABLE user_tokens (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  selector CHAR(12) NOT NULL UNIQUE,
+  validator_hash CHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  INDEX (user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+**Set cookie on login** (pseudocode)
+
+```php
+// generate selector + validator
+$selector  = bin2hex(random_bytes(6));
+$validator = bin2hex(random_bytes(32));
+$hash      = hash('sha256', $validator);
+// store selector + hash in DB with expiry
+// set cookie value: selector:validator (Base64) with 30d expiry
+```
+
+**On subsequent visits**
+
+```php
+// if no $_SESSION but remember-me cookie exists → parse selector:validator
+// fetch DB row by selector, compare hash_equals(hash('sha256', validator), validator_hash)
+// if OK and not expired → restore session + rotate token
+```
+
+> If you implement remember‑me, always **rotate** tokens and allow server-side revocation.
+
+---
+
+### Common failure cases
+
+* Wrong email/password → flash error + redirect back to login
+* Deleted user with stale session → guards treat as guest; protected pages redirect to login
+* Session fixation attempts → mitigated by `session_regenerate_id(true)` after login
+* Mixed HTTP/HTTPS → cookie `secure` flag must match the scheme or the cookie may not be sent
+
+### Testing checklist
+
+* **Signup**: creates row, hashes password, logs in, redirects with success message.
+* **Login**: correct creds → sets session + regenerates ID; wrong creds → error flash.
+* **Logout**: removes session data and cookie; navigating back doesn’t re-authenticate.
+* **Protected pages**: redirect guests; admins only see admin pages; customers only see their own data.
+* **Flash**: message shows once and clears on refresh.
+
+
+
 
 ## Business Flows
 
