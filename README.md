@@ -567,7 +567,7 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
   ```bash
   cd C:\xampp\htdocs
   git clone <your-repo-url> coffeeshop
-```
+
 
 ### 3) Create the database (phpMyAdmin or CLI)
 
