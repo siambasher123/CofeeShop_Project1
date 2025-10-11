@@ -113,7 +113,7 @@ $user_logged_in = isset($_SESSION['user_id']);
                 <div class="col-md-4">
                     <div class="team-card text-center p-4">
                         <i class="bi bi-person-circle" style="font-size: 3rem; color:#6f4e37;"></i>
-                        <h5 class="mt-3">John Doe</h5>
+                        <h5 class="mt-3">Siam Basher</h5>
                         <p class="text-muted">Founder & CEO</p>
                         <p>Passionate about coffee and customer happiness. Leading Coffee Shop with vision and dedication.</p>
                     </div>
@@ -121,16 +121,16 @@ $user_logged_in = isset($_SESSION['user_id']);
                 <div class="col-md-4">
                     <div class="team-card text-center p-4">
                         <i class="bi bi-person-circle" style="font-size: 3rem; color:#6f4e37;"></i>
-                        <h5 class="mt-3">Jane Smith</h5>
-                        <p class="text-muted">Head Barista</p>
+                        <h5 class="mt-3">Md. Shifat Hasan</h5>
+                        <p class="text-muted">Founder & Head Barista</p>
                         <p>Mastering the art of coffee brewing, creating unique flavors and ensuring top-quality beverages every day.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="team-card text-center p-4">
                         <i class="bi bi-person-circle" style="font-size: 3rem; color:#6f4e37;"></i>
-                        <h5 class="mt-3">Alex Johnson</h5>
-                        <p class="text-muted">Operations Manager</p>
+                        <h5 class="mt-3">Abhijeet Deb Nath</h5>
+                        <p class="text-muted">Founder & Operations Manager</p>
                         <p>Ensuring smooth operations, managing logistics, and making sure every order reaches our customers perfectly.</p>
                     </div>
                 </div>
