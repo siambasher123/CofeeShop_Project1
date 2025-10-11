@@ -75,6 +75,7 @@ body { font-family: 'Roboto', sans-serif; background-color: #f9f7f1; }
 .seat.reserved { background-color: #d3d3d3; cursor: not-allowed; }
 .seat-row { display: flex; justify-content: flex-start; flex-wrap: wrap; margin-bottom: 10px; }
 .gap { width: 40px; height: 40px; margin: 5px; background: transparent; }
+
 .reservation-section { background: #fff8f0; padding: 30px; border-radius: 15px; margin:50px auto; max-width:900px; text-align:center; position: relative; }
 .back-btn { position: absolute; top: 20px; left: 20px; }
 </style>
@@ -92,6 +93,7 @@ body { font-family: 'Roboto', sans-serif; background-color: #f9f7f1; }
         <ul class="navbar-nav ms-auto">
             <li class="nav-item"><a class="nav-link" href="index.php">Home</a></li>
             <li class="nav-item"><a class="nav-link" href="menu.php">Menu</a></li>
+
             <li class="nav-item"><a class="nav-link active" href="seat_reservation.php">Reservation</a></li>
             <li class="nav-item"><a class="nav-link" href="about.php">About Us</a></li>
             <li class="nav-item"><a class="nav-link" href="contact.php">Contact Us</a></li>
@@ -109,6 +111,7 @@ body { font-family: 'Roboto', sans-serif; background-color: #f9f7f1; }
         <label>Select Group Size:</label>
         <select id="groupSize" class="form-select w-auto d-inline-block">
             <option value="1">1 Person</option>
+
             <option value="2">2 (Couple)</option>
             <option value="3">3 Persons</option>
             <option value="4">4 (Family)</option>
@@ -124,11 +127,17 @@ body { font-family: 'Roboto', sans-serif; background-color: #f9f7f1; }
 <script>
 const seatMatrix = [
     [1,1,0,1,1,1,0,1,1,1,1,0,1,1,1,0,1,1,1,1],
+
     [1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,1],
+
     [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1],
+
     [1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1],
+
     [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1],
+
     [1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,1],
+
     [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1]
 ];
 
@@ -142,6 +151,7 @@ function showSeats() {
         const rowDiv = document.createElement('div');
         rowDiv.classList.add('seat-row');
         row.forEach((seat, c) => {
+
             const seatDiv = document.createElement('div');
             if(seat === 1){
                 seatDiv.classList.add('seat');
@@ -163,6 +173,7 @@ function showSeats() {
 function reserveSeats() {
     const selectedSeats = [];
     document.querySelectorAll('.seat.selected').forEach(seatDiv => {
+
         const rowDiv = seatDiv.parentElement;
         const r = Array.from(rowDiv.parentElement.children).indexOf(rowDiv);
         const c = Array.from(rowDiv.children).indexOf(seatDiv);
@@ -184,6 +195,7 @@ function reserveSeats() {
         if(data.status==='success'){
             alert("Seats reserved successfully!");
             reservedSeats = reservedSeats.concat(selectedSeats);
+
             showSeats();
         } else {
             alert("Error reserving seats.");
