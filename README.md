@@ -871,6 +871,93 @@ If you want zero Apache config, place the project under `/var/www/html/coffeesho
 
 <!-- TODO: Document `config.php` keys (DB_HOST, DB_USER, DB_PASS, DB_NAME); how to store safely in dev vs prod. 10–20 lines. -->
 
+## Environment & Secrets
+
+**Where configuration lives:** `config.php` (included by all pages).
+
+### Local (XAMPP) example (`config.php`)
+
+```php
+<?php
+// Start session once for the app
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Environment
+define('APP_ENV', 'local'); // 'local' or 'production'
+date_default_timezone_set('Asia/Dhaka');
+
+// Database (local dev)
+// NOTE: If your MySQL runs on default port, change 3308 -> 3306
+$servername = 'localhost';
+$username   = 'root';
+$password   = '';
+$dbname     = 'mycoffeeshop';
+$port       = 3308;
+
+// Create connection
+$conn = new mysqli($servername, $username, $password, $dbname, $port);
+if ($conn->connect_error) {
+    // Fail fast in dev; in production, log instead of echoing secrets
+    die('DB connection failed: ' . $conn->connect_error);
+}
+// Always use utf8mb4
+$conn->set_charset('utf8mb4');
+
+// Optional: basic error display toggled by environment
+if (APP_ENV === 'local') {
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+    error_reporting(E_ALL);
+} else {
+    ini_set('display_errors', 0);
+    error_reporting(E_ALL & ~E_NOTICE & ~E_STRICT & ~E_DEPRECATED);
+}
+
+// Optional: load overrides from a gitignored file if present
+$localOverride = __DIR__ . '/config.local.php';
+if (is_file($localOverride)) {
+    require $localOverride; // can override any of the above vars/defines
+}
+```
+
+### Production guidance (don’t commit real secrets)
+
+* Do not hard-code production credentials in `config.php`.
+* Provide them via environment variables or an injected `config.local.php` that is **gitignored**.
+* Suggested env vars: `DB_HOST`, `DB_USER`, `DB_PASS`, `DB_NAME`, `DB_PORT`, `APP_ENV`.
+
+### Environment-variable pattern (drop-in replacement)
+
+```php
+$servername = getenv('DB_HOST') ?: 'localhost';
+$username   = getenv('DB_USER') ?: 'root';
+$password   = getenv('DB_PASS') ?: '';
+$dbname     = getenv('DB_NAME') ?: 'mycoffeeshop';
+$port       = (int) (getenv('DB_PORT') ?: 3308);
+```
+
+### Git hygiene
+
+Add overrides to `.gitignore`:
+
+```
+config.local.php
+.env
+```
+
+### Password storage
+
+* Store passwords using `password_hash($plain, PASSWORD_DEFAULT)`.
+* Verify with `password_verify($plain, $row['password'])`.
+* Ensure the `users.password` column is `VARCHAR(255)`.
+
+### Character set
+
+* Use `utf8mb4` for the database, tables, and connection to support emojis and multilingual text.
+
+
 ## Database Schema
 
 <!-- TODO: List tables, columns, types, constraints. Prefer a table-per-commit approach. 1 table (10–30 lines) each commit to grow insertions meaningfully. -->
