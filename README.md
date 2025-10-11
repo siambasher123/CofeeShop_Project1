@@ -1294,7 +1294,7 @@ This app uses **cookie-based PHP sessions** for identity. After a successful log
 
 ### Sequence diagram (login)
 
-```mermaid
+```
 sequenceDiagram
   participant B as Browser
   participant L as login.php
