@@ -1,4 +1,4 @@
-# CoffeeShop Project
+# Project | Coffee Shop | Information System Design Lab
 
 ## Table of Contents
 
@@ -7,19 +7,20 @@
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Setup](#setup)
-- [Diagrams](#diagrams)
+- [Project Artifacts](#project-artifacts)
 - [License](#license)
 
 ## Overview
 
-CoffeeShop is a PHP/MySQL web app that models a small café’s online experience. Customers can browse the menu, maintain a cart, reserve seats, and place orders. Administrators manage catalog data, discounts, reservations, and transaction history from a dedicated dashboard.
+This Information Systems Lab project delivers a PHP/MySQL portal that models the daily workflow of a modern café. Customers can browse the menu, maintain a cart, reserve seats, track orders, and request support. Administrators operate a dedicated dashboard to manage catalog data, discounts, reservations, and transaction history while supervising service quality.
 
 ## Key Features
 
 - User registration, login, and role-based access control.
 - Menu browsing with cart management and checkout flow.
 - Seat reservation module that prevents double booking.
-- Admin dashboard for products, discounts, orders, and transactions.
+- Order placement with payment logging and fulfillment tracking.
+- Admin dashboard for products, discounts, orders, reservations, and transactions.
 - Contact form and basic content pages for customer outreach.
 
 ## Tech Stack
@@ -47,15 +48,16 @@ CoffeeShop is a PHP/MySQL web app that models a small café’s online experienc
 
 1. Clone the repository into your web server root (e.g., `htdocs` or `/var/www/html`).
 2. Import `mycoffeshop.sql` into MySQL (`coffeeshop` database by default).
-3. Update credentials in `config.php` if necessary.
-4. Serve through Apache (XAMPP/LAMP) and visit `http://localhost/CoffeeShop_Project1`.
+3. Update credentials in `config.php` to match your environment.
+4. Serve through Apache (XAMPP/LAMP) and visit `http://localhost/CofeeShop_Project1`.
 5. Log in with an existing admin user or register a new customer account.
 
 - Run `php -l <file>` to lint PHP scripts.
 
-## Diagrams
+## Project Artifacts
 
-PlantUML source files are in the `diagrams/` directory.
+- System documentation is summarized in `ProjectReport.md`.
+- PlantUML models (`diagrams/`) include Level 0 and Level 1 DFDs, use case, sequence, activity, class, and Gantt chart diagrams. Generate images with your preferred PlantUML tool before embedding in reports.
 
 ## License
 

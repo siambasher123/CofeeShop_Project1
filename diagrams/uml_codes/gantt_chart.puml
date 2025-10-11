@@ -1,0 +1,35 @@
+@startgantt GanttChart_Clipped
+' Coffee Shop Project Roadmap — CLIPPED AT 2025-10-11
+Project starts 2025-10-04
+Project ends   2025-10-11
+
+skinparam defaultFontName "Arial"
+skinparam defaultFontSize 14
+skinparam dpi 150
+skinparam shadowing false
+
+printscale weekly
+scale 1 day
+
+[Project Kickoff] lasts 1 day
+[Project Kickoff] starts 2025-10-04
+
+[Discovery & Scope Alignment] lasts 2 days
+[Discovery & Scope Alignment] starts at [Project Kickoff]'s end
+
+[Experience Research] lasts 2 days
+[Experience Research] starts at [Discovery & Scope Alignment]'s start
+
+[Platform Architecture] lasts 2 days
+[Platform Architecture] starts at [Discovery & Scope Alignment]'s end
+
+[User Account Module] lasts 2 days
+[User Account Module] starts at [Platform Architecture]'s end
+
+[Product Catalog & Media] lasts 2 days
+[Product Catalog & Media] starts at [User Account Module]'s start
+
+' Visual marker for the cutoff used in the latest chart
+[Timeline Cutoff] happens 2025-10-11
+
+@endgantt

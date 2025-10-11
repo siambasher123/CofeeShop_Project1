@@ -48,21 +48,34 @@ body { font-family: 'Roboto', sans-serif; background-color: #f8f9fa; }
 </style>
 </head>
 <body>
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <div class="sidebar p-3">
+            <h3 class="text-white text-center mb-4">Admin Panel</h3>
+            <a href="admin_dashboard.php" class="bg-warning text-dark">Dashboard</a>
+            <a href="add_products.php">Add Products</a>
+            <!-- <a href="inventory_list.php">Inventory List</a> -->
+            <a href="order_list.php">Order List</a>
+            <a href="seats_to_reserve.php">Reservation</a> <!-- Added Reservation menu item -->
+            <a href="transaction_history.php">Transaction History</a>
+            <a href="contact_list.php">Contact List</a>
+            <a href="give_discount.php">Give Discount</a>
+            <a href="logout.php">Logout</a>
+            <a href="index.php" class="mt-3 btn btn-warning w-100 text-center">Back to Homepage</a>
+        </div>
 
-<div class="d-flex">
-    <!-- Sidebar -->
-    <div class="sidebar p-3">
-        <h3 class="text-white text-center mb-4">Admin Panel</h3>
-        <a href="admin_dashboard.php" class="bg-warning text-dark">Dashboard</a>
-        <a href="add_products.php">Add Products</a>
-        <a href="order_list.php">Order List</a>
-        <a href="seats_to_reserve.php">Reservation</a> <!-- Added Reservation menu item -->
-        <a href="transaction_history.php">Transaction History</a>
-        <a href="contact_list.php">Contact List</a>
-        <a href="give_discount.php">Give Discount</a>
-        <a href="logout.php">Logout</a>
-        <a href="index.php" class="mt-3 btn btn-warning w-100 text-center">Back to Homepage</a>
-    </div>
+        <!-- Main content -->
+        <div class="content flex-grow-1">
+            <nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-4">
+                <div class="container-fluid">
+                    <span class="navbar-brand mb-0 h1">Welcome, Admin</span>
+                </div>
+            </nav>
+
+            <div class="container">
+                <h2>Dashboard Overview</h2>
+                <!-- <p>Use the sidebar to manage products, inventory, orders, transactions, contacts, and discounts.</p> -->
+                <p>Use the sidebar to manage products, orders, transactions, contacts, and discounts.</p>
 
     <!-- Main content -->
     <div class="content flex-grow-1">

@@ -1,0 +1,72 @@
+@startuml UseCaseDiagram
+' Coffee Shop Use Case Diagram
+skinparam defaultFontName "Arial"
+skinparam defaultFontSize 14
+skinparam dpi 150
+skinparam shadowing false
+skinparam nodesep 42
+skinparam ranksep 48
+skinparam actorStyle hollow
+skinparam usecase {
+  BackgroundColor #FEF5E7
+  BorderColor #6F4E37
+  BorderThickness 1.1
+}
+left to right direction
+
+actor "Guest" as Guest
+actor "Customer" as Customer
+actor "Administrator" as Admin
+actor "Payment Gateway" as Payment
+actor "Notification Service" as Notifier
+
+Customer --|> Guest
+
+rectangle "Coffee Shop Web Application" as System {
+  usecase "Browse Menu" as UC_Browse
+  usecase "Register Account" as UC_Register
+  usecase "Authenticate Session" as UC_Login
+  usecase "Manage Cart" as UC_Cart
+  usecase "Checkout Order" as UC_Checkout
+  usecase "Track Order Status" as UC_Track
+  usecase "View Receipts\n& Order History" as UC_Receipts
+  usecase "Book Seat Reservation" as UC_Reserve
+  usecase "Submit Support Request" as UC_Support
+  usecase "Maintain Catalog" as UC_Catalog
+  usecase "Coordinate Fulfillment" as UC_Fulfillment
+  usecase "Manage Reservations" as UC_ManageReservations
+  usecase "Respond to Support" as UC_Respond
+  usecase "Review Metrics\n& Discounts" as UC_Analytics
+  usecase "Process Payment" as UC_Payment
+  usecase "Send Notifications" as UC_Notify
+}
+
+Guest --> UC_Browse
+Guest --> UC_Register
+Guest --> UC_Support
+
+Customer --> UC_Login
+Customer --> UC_Cart
+Customer --> UC_Checkout
+Customer --> UC_Track
+Customer --> UC_Receipts
+Customer --> UC_Reserve
+Customer --> UC_Support
+
+Admin --> UC_Catalog
+Admin --> UC_Fulfillment
+Admin --> UC_ManageReservations
+Admin --> UC_Respond
+Admin --> UC_Analytics
+
+UC_Register --> UC_Login : <<include>>
+UC_Checkout --> UC_Payment : <<include>>
+UC_Checkout --> UC_Receipts : <<include>>
+UC_Fulfillment --> UC_Respond : <<extend>>
+UC_Support --> UC_Respond : <<extend>>
+UC_Analytics --> UC_Notify : <<include>>
+
+UC_Payment --> Payment
+UC_Notify --> Notifier
+
+@enduml
