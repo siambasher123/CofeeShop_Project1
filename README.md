@@ -1,7 +1,5 @@
 # CoffeeShop— README
 
-> This README is designed to be grown **gradually** in many small, meaningful commits (docs-only). Each subsection below is a bite‑sized chunk you can complete and commit separately.
-
 ---
 
 ## Table of Contents
@@ -410,8 +408,8 @@ index.php
 - Switch to **PDO** or a lightweight DAO later without breaking page contracts.
 - Move common layout/header/footer into `require`-able partials to reduce duplication.
 - Optional CSRF tokens can be added to forms for stronger protection.
-```
-```
+
+
 ## Folder & File Map
 
 **Important app files:**
@@ -425,7 +423,6 @@ index.php
 * `config.php`
 
 
-````md
 ### `index.php` — Landing / Entry
 
 **Purpose**
@@ -478,6 +475,7 @@ $flashSuccess = $_SESSION['flash_success'] ?? null;
 $flashError   = $_SESSION['flash_error']   ?? null;
 unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 ?>
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -517,7 +515,7 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
 </body>
 </html>
-````
+```
 
 **Security & robustness notes**
 
@@ -546,9 +544,6 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 * `login.php` / `signup.php` — auth entry.
 * `admin_dashboard.php` — admin-only.
 
-
-
-````md
 ## Setup — Windows (XAMPP)
 
 ### Prerequisites
@@ -572,7 +567,7 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
   ```bash
   cd C:\xampp\htdocs
   git clone <your-repo-url> coffeeshop
-````
+
 
 ### 3) Create the database (phpMyAdmin or CLI)
 
@@ -870,11 +865,6 @@ sudo ufw status
 If you want zero Apache config, place the project under `/var/www/html/coffeeshop` and browse:
 `http://localhost/coffeeshop/`. You can add a proper VirtualHost later.
 
-```
-
-**Suggested commit message:**  
-`docs(setup): add Linux (LAMP) setup guide with vhost, permissions, PHP/MySQL tips`
-```
 
 
 ## Environment & Secrets
