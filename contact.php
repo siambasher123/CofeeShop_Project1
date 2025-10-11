@@ -2,18 +2,43 @@
 session_start();
 include_once 'config.php';
 
-// Handle form submission
-$success_msg = "";
+$nameValue = "";
+$emailValue = "";
+$messageValue = "";
+$feedback_msg = "";
+$feedback_type = "success";
 if (isset($_POST['submit'])) {
-    $name = $conn->real_escape_string($_POST['name']);
-    $email = $conn->real_escape_string($_POST['email']);
-    $message = $conn->real_escape_string($_POST['message']);
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $message = trim($_POST['message'] ?? '');
 
-    $sql = "INSERT INTO contacts (name, email, message) VALUES ('$name', '$email', '$message')";
-    if ($conn->query($sql)) {
-        $success_msg = "Your message has been sent successfully!";
+    $nameValue = $name;
+    $emailValue = $email;
+    $messageValue = $message;
+
+    if ($name === '' || $email === '' || $message === '') {
+        $feedback_type = "danger";
+        $feedback_msg = "All fields are required.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $feedback_type = "danger";
+        $feedback_msg = "Please enter a valid email address.";
     } else {
-        $success_msg = "Error sending message. Please try again.";
+        $stmt = $conn->prepare("INSERT INTO contacts (name, email, message) VALUES (?, ?, ?)");
+        if ($stmt) {
+            $stmt->bind_param("sss", $name, $email, $message);
+            if ($stmt->execute()) {
+                $feedback_type = "success";
+                $feedback_msg = "Your message has been sent successfully!";
+                $nameValue = $emailValue = $messageValue = "";
+            } else {
+                $feedback_type = "danger";
+                $feedback_msg = "Error sending message. Please try again.";
+            }
+            $stmt->close();
+        } else {
+            $feedback_type = "danger";
+            $feedback_msg = "Unexpected error. Please try again later.";
+        }
     }
 }
 ?>
@@ -137,22 +162,22 @@ if (isset($_POST['submit'])) {
                 <div class="contact-card">
                     <h3 class="mb-4 text-center">Send a Message</h3>
 
-                    <?php if ($success_msg): ?>
-                        <div class="alert alert-success text-center"><?php echo $success_msg; ?></div>
+                    <?php if ($feedback_msg): ?>
+                        <div class="alert alert-<?php echo htmlspecialchars($feedback_type, ENT_QUOTES); ?> text-center"><?php echo htmlspecialchars($feedback_msg, ENT_QUOTES); ?></div>
                     <?php endif; ?>
 
                     <form method="post">
                         <div class="mb-3">
                             <label for="name" class="form-label">Full Name</label>
-                            <input type="text" class="form-control" id="name" name="name" required placeholder="Your Name">
+                            <input type="text" class="form-control" id="name" name="name" required placeholder="Your Name" value="<?php echo htmlspecialchars($nameValue, ENT_QUOTES); ?>">
                         </div>
                         <div class="mb-3">
                             <label for="email" class="form-label">Email Address</label>
-                            <input type="email" class="form-control" id="email" name="email" required placeholder="your@example.com">
+                            <input type="email" class="form-control" id="email" name="email" required placeholder="your@example.com" value="<?php echo htmlspecialchars($emailValue, ENT_QUOTES); ?>">
                         </div>
                         <div class="mb-3">
                             <label for="message" class="form-label">Message</label>
-                            <textarea class="form-control" id="message" name="message" rows="5" required placeholder="Write your message here..."></textarea>
+                            <textarea class="form-control" id="message" name="message" rows="5" required placeholder="Write your message here..."><?php echo htmlspecialchars($messageValue, ENT_QUOTES); ?></textarea>
                         </div>
                         <div class="text-center">
                             <button type="submit" name="submit" class="btn btn-warning btn-lg w-50">Send Message</button>
