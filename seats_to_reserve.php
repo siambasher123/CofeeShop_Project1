@@ -4,6 +4,7 @@ if (session_status() == PHP_SESSION_NONE) session_start();
 if(!isset($_SESSION['user_id']) || $_SESSION['role']!='admin') header("Location: login.php");
 
 // Fetch all reserved seats
+
 $reserved = [];
 $result = $conn->query("
     SELECT r.seat_row, r.seat_col, r.reserved_at, u.first_name AS user_name
@@ -29,6 +30,7 @@ $reserved_json = json_encode($reserved);
 <title>Admin - Seat Reservations</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
+
 .seat { width:40px; height:40px; margin:5px; border-radius:5px; display:inline-block; text-align:center; line-height:40px; cursor:default; background:#6f4e37; color:white; }
 .seat.reserved { background:#d9534f; }
 .seat-row { display:flex; flex-wrap:wrap; margin-bottom:10px; }
@@ -62,6 +64,7 @@ $reserved_json = json_encode($reserved);
                     <td>{$c}</td>
                     <td>{$r['user']}</td>
                     <td>".($r['row']+1)."</td>
+
                     <td>".($r['col']+1)."</td>
                     <td>{$r['time']}</td>
                 </tr>";
@@ -75,11 +78,17 @@ $reserved_json = json_encode($reserved);
 // Define full seat matrix (adjust rows/cols as per your coffee shop layout)
 const seatMatrix = [
     [1,1,0,1,1,1,0,1,1,1,1,0,1,1,1,0,1,1,1,1],
+
     [1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,1],
+
     [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1],
+
     [1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1],
+
     [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1],
+
     [1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,1],
+
     [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1]
 ];
 
