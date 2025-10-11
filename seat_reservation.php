@@ -1,5 +1,6 @@
 <?php 
 include 'config.php'; 
+require_once __DIR__ . 'SeatReservation.php';
 
 // Safe session start
 if (session_status() == PHP_SESSION_NONE) {
@@ -13,49 +14,19 @@ if(!isset($_SESSION['user_id'])){
 }
 
 $user_id = $_SESSION['user_id'];
+$reservationService = new SeatReservation($conn);
 
 // Handle AJAX reservation
 if(isset($_POST['action']) && $_POST['action'] == 'reserve'){
     $seats = json_decode($_POST['seats'], true);
 
-    // Make sure table exists
-    $conn->query("CREATE TABLE IF NOT EXISTS `seat_reservations` (
-      `id` INT NOT NULL AUTO_INCREMENT,
-      `user_id` INT NOT NULL,
-      `seat_row` INT NOT NULL,
-      `seat_col` INT NOT NULL,
-      `reserved_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (`id`),
-      CONSTRAINT `fk_seat_reservations_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-    foreach($seats as $seat){
-        $row = intval($seat['row']);
-        $col = intval($seat['col']);
-        // Check if seat is already reserved
-        $check = $conn->prepare("SELECT id FROM seat_reservations WHERE seat_row=? AND seat_col=?");
-        $check->bind_param("ii",$row,$col);
-        $check->execute();
-        $check->store_result();
-        if($check->num_rows == 0){
-            $stmt = $conn->prepare("INSERT INTO seat_reservations (user_id, seat_row, seat_col) VALUES (?, ?, ?)");
-            $stmt->bind_param("iii",$user_id,$row,$col);
-            $stmt->execute();
-        }
-    }
+    $reservationService->reserveSeats($user_id, $seats ?? []);
     echo json_encode(['status'=>'success']);
     exit;
 }
 
 // Fetch reserved seats safely
-$reserved = [];
-$table_check = $conn->query("SHOW TABLES LIKE 'seat_reservations'");
-if($table_check->num_rows > 0){
-    $result = $conn->query("SELECT seat_row, seat_col FROM seat_reservations");
-    while($row = $result->fetch_assoc()){
-        $reserved[] = ['row'=>$row['seat_row'],'col'=>$row['seat_col']];
-    }
-}
+$reserved = $reservationService->getReservedSeats();
 $reserved_json = json_encode($reserved);
 ?>
 <!DOCTYPE html>
