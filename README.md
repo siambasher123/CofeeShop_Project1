@@ -870,11 +870,6 @@ sudo ufw status
 If you want zero Apache config, place the project under `/var/www/html/coffeeshop` and browse:
 `http://localhost/coffeeshop/`. You can add a proper VirtualHost later.
 
-```
-
-**Suggested commit message:**  
-`docs(setup): add Linux (LAMP) setup guide with vhost, permissions, PHP/MySQL tips`
-```
 
 
 ## Environment & Secrets
