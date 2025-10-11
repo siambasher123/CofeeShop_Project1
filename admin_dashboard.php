@@ -79,7 +79,6 @@ while ($row = $sales_result->fetch_assoc()) {
             <h3 class="text-white text-center mb-4">Admin Panel</h3>
             <a href="admin_dashboard.php" class="bg-warning text-dark">Dashboard</a>
             <a href="add_products.php">Add Products</a>
-            <a href="inventory_list.php">Inventory List</a>
             <a href="order_list.php">Order List</a>
             <a href="seats_to_reserve.php">Reservation</a> <!-- Added Reservation menu item -->
             <a href="transaction_history.php">Transaction History</a>
