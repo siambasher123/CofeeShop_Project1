@@ -10,26 +10,47 @@ $user_name = '';
 $user_id = $user_logged_in ? $_SESSION['user_id'] : 0;
 
 if ($user_logged_in) {
-
-    $user_result = $conn->query("SELECT first_name FROM users WHERE id='$user_id'");
-    if ($user_result->num_rows > 0) {
-
-        $user_name = $user_result->fetch_assoc()['first_name'];
+    $stmt = $conn->prepare("SELECT first_name FROM users WHERE id = ?");
+    if ($stmt) {
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result && $result->num_rows > 0) {
+            $user_name = (string) $result->fetch_assoc()['first_name'];
+        }
+        $stmt->close();
     }
 }
 
 
 // Handle Add to Cart
 if(isset($_GET['add_to_cart']) && $user_logged_in){
-
-
     $product_id = intval($_GET['add_to_cart']);
+    if($product_id > 0){
+        $checkStmt = $conn->prepare("SELECT id FROM cart WHERE user_id = ? AND product_id = ? LIMIT 1");
+        if ($checkStmt) {
+            $checkStmt->bind_param("ii", $user_id, $product_id);
+            $checkStmt->execute();
+            $checkStmt->store_result();
 
-    $check = $conn->query("SELECT * FROM cart WHERE user_id=$user_id AND product_id=$product_id");
-    if($check->num_rows > 0){
-        $conn->query("UPDATE cart SET quantity = quantity + 1 WHERE user_id=$user_id AND product_id=$product_id");
-    } else {
-        $conn->query("INSERT INTO cart (user_id, product_id, quantity) VALUES ($user_id,$product_id,1)");
+            if($checkStmt->num_rows > 0){
+                $updateStmt = $conn->prepare("UPDATE cart SET quantity = quantity + 1 WHERE user_id = ? AND product_id = ?");
+                if ($updateStmt) {
+                    $updateStmt->bind_param("ii", $user_id, $product_id);
+                    $updateStmt->execute();
+                    $updateStmt->close();
+                }
+            } else {
+                $insertStmt = $conn->prepare("INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, 1)");
+                if ($insertStmt) {
+                    $insertStmt->bind_param("ii", $user_id, $product_id);
+                    $insertStmt->execute();
+                    $insertStmt->close();
+                }
+            }
+
+            $checkStmt->close();
+        }
     }
     header("Location: menu.php?msg=added");
     exit();
@@ -104,20 +125,20 @@ body { font-family: 'Roboto', sans-serif; background-color: #f8f9fa; }
             <?php while($product = $result->fetch_assoc()): ?>
                 <div class="col-md-3 mb-4">
                     <div class="card shadow-sm h-100">
-                        <img src="<?= $product['image'] ?>" class="card-img-top" alt="<?= $product['name'] ?>">
+                        <img src="<?= htmlspecialchars($product['image'], ENT_QUOTES) ?>" class="card-img-top" alt="<?= htmlspecialchars($product['name'], ENT_QUOTES) ?>">
                         <div class="card-body d-flex flex-column">
-                            <h5 class="card-title"><?= $product['name'] ?></h5>
-                            <p class="card-text"><?= $product['description'] ?></p>
+                            <h5 class="card-title"><?= htmlspecialchars($product['name'], ENT_QUOTES) ?></h5>
+                            <p class="card-text"><?= htmlspecialchars($product['description'] ?? '', ENT_QUOTES) ?></p>
                             <p class="card-text">
                                 <?php if(!empty($product['discount_price'])): ?>
-                                    <span class="old-price">$<?= $product['price'] ?></span>
-                                    <span class="text-success fw-bold">$<?= $product['discount_price'] ?></span>
+                                    <span class="old-price">$<?= htmlspecialchars($product['price'], ENT_QUOTES) ?></span>
+                                    <span class="text-success fw-bold">$<?= htmlspecialchars($product['discount_price'], ENT_QUOTES) ?></span>
                                 <?php else: ?>
-                                    <strong>$<?= $product['price'] ?></strong>
+                                    <strong>$<?= htmlspecialchars($product['price'], ENT_QUOTES) ?></strong>
                                 <?php endif; ?>
                             </p>
                             <?php if($user_logged_in): ?>
-                                <a href="menu.php?add_to_cart=<?= $product['id'] ?>" class="btn btn-warning mt-auto w-100">Add to Cart</a>
+                                <a href="menu.php?add_to_cart=<?= (int)$product['id'] ?>" class="btn btn-warning mt-auto w-100">Add to Cart</a>
                             <?php else: ?>
                                 <a href="login.php" class="btn btn-warning mt-auto w-100">Login to Add</a>
                             <?php endif; ?>

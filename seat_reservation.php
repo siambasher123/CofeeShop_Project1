@@ -26,8 +26,8 @@ if(isset($_POST['action']) && $_POST['action'] == 'reserve'){
       `seat_col` INT NOT NULL,
       `reserved_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (`id`),
-      FOREIGN KEY (`user_id`) REFERENCES `users1`(`id`) ON DELETE CASCADE
-    )");
+      CONSTRAINT `fk_seat_reservations_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
     foreach($seats as $seat){
         $row = intval($seat['row']);

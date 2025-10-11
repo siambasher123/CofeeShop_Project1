@@ -9,27 +9,51 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin'){
 
 // Handle form submission
 if(isset($_POST['add_product'])){
-    $name = $_POST['name'];
-    $price = $_POST['price'];
-    $description = $_POST['description'];
+    $name = trim($_POST['name'] ?? '');
+    $price = trim($_POST['price'] ?? '');
+    $description = trim($_POST['description'] ?? '');
 
-    // Handle file upload
-    $image_name = $_FILES['image']['name'];
-    $image_tmp = $_FILES['image']['tmp_name'];
-    $image_folder = "uploads/" . basename($image_name);
-
-    // Move uploaded image
-    if(move_uploaded_file($image_tmp, $image_folder)){
-        // Insert into database
-        $sql = "INSERT INTO products (name, image, price, description) 
-                VALUES ('$name', '$image_folder', '$price', '$description')";
-        if($conn->query($sql) === TRUE){
-            $success = "Product added successfully!";
-        } else {
-            $error = "Database error: " . $conn->error;
-        }
+    if($name === '' || $price === '' || !is_numeric($price)){
+        $error = "Please provide a valid product name and price.";
+    } elseif(!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK){
+        $error = "Please upload a product image.";
     } else {
-        $error = "Failed to upload image.";
+        $image_tmp = $_FILES['image']['tmp_name'];
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = $finfo ? finfo_file($finfo, $image_tmp) : null;
+        if($finfo){ finfo_close($finfo); }
+
+        $allowed = [
+            'image/jpeg' => '.jpg',
+            'image/png'  => '.png',
+            'image/webp' => '.webp'
+        ];
+
+        if(!$mime || !isset($allowed[$mime])){
+            $error = "Unsupported image type. Please upload JPG, PNG, or WEBP.";
+        } else {
+            $newFileName = 'uploads/product_' . bin2hex(random_bytes(8)) . $allowed[$mime];
+
+            if(!move_uploaded_file($image_tmp, $newFileName)){
+                $error = "Failed to store uploaded image.";
+            } else {
+                $stmt = $conn->prepare("INSERT INTO products (name, image, price, description) VALUES (?, ?, ?, ?)");
+                if(!$stmt){
+                    $error = "Database error. Please try again.";
+                    unlink($newFileName);
+                } else {
+                    $priceValue = round((float)$price, 2);
+                    $stmt->bind_param("ssds", $name, $newFileName, $priceValue, $description);
+                    if($stmt->execute()){
+                        $success = "Product added successfully!";
+                    } else {
+                        $error = "Unable to save product. Please try again.";
+                        unlink($newFileName);
+                    }
+                    $stmt->close();
+                }
+            }
+        }
     }
 }
 ?>

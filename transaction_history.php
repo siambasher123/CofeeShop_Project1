@@ -11,19 +11,37 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin'){
 // Handle updating details
 if(isset($_POST['update_details'])){
     $transaction_id = intval($_POST['transaction_id']);
-    $details = $conn->real_escape_string($_POST['details']);
-    $conn->query("UPDATE transaction1 SET details='$details' WHERE id=$transaction_id");
+    $details = trim($_POST['details'] ?? '');
+
+    if($transaction_id > 0){
+        $stmt = $conn->prepare("UPDATE transaction1 SET details = ? WHERE id = ?");
+        if($stmt){
+            $stmt->bind_param("si", $details, $transaction_id);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
     header("Location: transaction_history.php");
     exit();
 }
 
-// Fetch transactions
-$transactions = $conn->query("
-    SELECT t.*, u.first_name, u.last_name
+$transactions = [];
+$stmt = $conn->prepare("
+    SELECT t.id, t.total, t.details, t.created_at, u.first_name, u.last_name
     FROM transaction1 t
     JOIN users u ON t.user_id = u.id
     ORDER BY t.created_at DESC
 ");
+if($stmt){
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if($result){
+        while($row = $result->fetch_assoc()){
+            $transactions[] = $row;
+        }
+    }
+    $stmt->close();
+}
 ?>
 
 <!DOCTYPE html>
@@ -77,24 +95,24 @@ $transactions = $conn->query("
                 </tr>
             </thead>
             <tbody>
-                <?php if($transactions->num_rows > 0): ?>
-                    <?php while($t = $transactions->fetch_assoc()): ?>
+                <?php if(count($transactions) > 0): ?>
+                    <?php foreach($transactions as $t): ?>
                     <tr>
-                        <td><?php echo $t['id']; ?></td>
-                        <td><?php echo $t['first_name'].' '.$t['last_name']; ?></td>
-                        <td>$<?php echo $t['total']; ?></td>
-                        <td><?php echo $t['details'] ?: '-'; ?></td>
+                        <td><?php echo htmlspecialchars($t['id'], ENT_QUOTES); ?></td>
+                        <td><?php echo htmlspecialchars($t['first_name'].' '.$t['last_name'], ENT_QUOTES); ?></td>
+                        <td>$<?php echo number_format((float)$t['total'], 2); ?></td>
+                        <td><?php echo $t['details'] !== null && $t['details'] !== '' ? htmlspecialchars($t['details'], ENT_QUOTES) : '-'; ?></td>
                         <td>
                             <!-- Update details form -->
                             <form method="post" class="d-flex">
-                                <input type="hidden" name="transaction_id" value="<?php echo $t['id']; ?>">
-                                <input type="text" name="details" class="form-control form-control-sm me-2" placeholder="Write details" value="<?php echo $t['details']; ?>">
+                                <input type="hidden" name="transaction_id" value="<?php echo htmlspecialchars($t['id'], ENT_QUOTES); ?>">
+                                <input type="text" name="details" class="form-control form-control-sm me-2" placeholder="Write details" value="<?php echo htmlspecialchars($t['details'] ?? '', ENT_QUOTES); ?>">
                                 <button type="submit" name="update_details" class="btn btn-warning btn-sm">Save</button>
                             </form>
                         </td>
-                        <td><?php echo $t['created_at']; ?></td>
+                        <td><?php echo htmlspecialchars($t['created_at'], ENT_QUOTES); ?></td>
                     </tr>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
                 <?php else: ?>
                     <tr><td colspan="6" class="text-center">No transactions yet</td></tr>
                 <?php endif; ?>

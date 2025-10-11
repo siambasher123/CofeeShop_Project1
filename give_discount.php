@@ -12,9 +12,23 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin'){
 if(isset($_POST['apply_discount'])){
     $product_id = intval($_POST['product_id']);
     $discount_price = floatval($_POST['discount_price']);
-    
-    $conn->query("UPDATE products SET discount_price=$discount_price WHERE id=$product_id");
-    $success = "Discount applied successfully!";
+
+    if($product_id > 0 && $discount_price >= 0){
+        $stmt = $conn->prepare("UPDATE products SET discount_price = ? WHERE id = ?");
+        if($stmt){
+            $stmt->bind_param("di", $discount_price, $product_id);
+            if($stmt->execute()){
+                $success = "Discount applied successfully!";
+            } else {
+                $error = "Unable to apply discount right now.";
+            }
+            $stmt->close();
+        } else {
+            $error = "Unable to prepare discount update.";
+        }
+    } else {
+        $error = "Please provide a valid discount amount.";
+    }
 }
 
 // Fetch products
@@ -58,7 +72,9 @@ $products = $conn->query("SELECT * FROM products ORDER BY id DESC");
         <h2>Give Discount to Products</h2>
 
         <?php if(isset($success)): ?>
-            <div class="alert alert-success"><?php echo $success; ?></div>
+            <div class="alert alert-success"><?php echo htmlspecialchars($success, ENT_QUOTES); ?></div>
+        <?php elseif(isset($error)): ?>
+            <div class="alert alert-danger"><?php echo htmlspecialchars($error, ENT_QUOTES); ?></div>
         <?php endif; ?>
 
         <table class="table table-bordered mt-3">
@@ -76,20 +92,20 @@ $products = $conn->query("SELECT * FROM products ORDER BY id DESC");
                 <?php while($p = $products->fetch_assoc()): ?>
 
                     <tr>
-                        <td><?php echo $p['id']; ?></td>
-                        <td><?php echo $p['name']; ?></td>
+                        <td><?php echo htmlspecialchars($p['id'], ENT_QUOTES); ?></td>
+                        <td><?php echo htmlspecialchars($p['name'], ENT_QUOTES); ?></td>
                         <td>
                             <?php if($p['discount_price']): ?>
-                                <span class="old-price">$<?php echo $p['price']; ?></span>
+                                <span class="old-price">$<?php echo htmlspecialchars($p['price'], ENT_QUOTES); ?></span>
                             <?php else: ?>
-                                $<?php echo $p['price']; ?>
+                                $<?php echo htmlspecialchars($p['price'], ENT_QUOTES); ?>
                             <?php endif; ?>
                         </td>
                         <td>
                             <form method="post" class="d-flex">
-                                <input type="hidden" name="product_id" value="<?php echo $p['id']; ?>">
+                                <input type="hidden" name="product_id" value="<?php echo htmlspecialchars($p['id'], ENT_QUOTES); ?>">
                                 <input type="number" step="0.01" min="0" name="discount_price" class="form-control me-2" 
-                                       value="<?php echo $p['discount_price'] ?: $p['price']; ?>" required>
+                                       value="<?php echo htmlspecialchars($p['discount_price'] ?: $p['price'], ENT_QUOTES); ?>" required>
                                 <button type="submit" name="apply_discount" class="btn btn-warning">Apply</button>
                             </form>
                         </td>

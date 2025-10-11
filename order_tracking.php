@@ -181,7 +181,7 @@ function get_orders_for_user($conn, $user_id, $limit=20){
 function insert_order($conn, $payload){
     $sql = "INSERT INTO orders (order_code, user_id, customer_name, customer_email, customer_phone, total, status, created_at, updated_at)
             VALUES (?,?,?,?,?,?,?,?,?)";
-    $stmt = db_exec($conn, $sql, 'sisss dsss', [
+    $stmt = db_exec($conn, $sql, 'sisssdsss', [
         $payload['order_code'],
         $payload['user_id'],
         $payload['customer_name'],
