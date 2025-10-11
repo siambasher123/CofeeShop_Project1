@@ -21,7 +21,9 @@ if(isset($_POST['apply_discount'])){
 $products = $conn->query("SELECT * FROM products ORDER BY id DESC");
 ?>
 
+
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -43,6 +45,7 @@ $products = $conn->query("SELECT * FROM products ORDER BY id DESC");
         <h3 class="text-white text-center mb-4">Admin Panel</h3>
         <a href="admin_dashboard.php">Dashboard</a>
         <a href="add_products.php">Add Products</a>
+
         <a href="inventory_list.php">Inventory List</a>
         <a href="order_list.php">Order List</a>
         <a href="transaction_history.php">Transaction History</a>
@@ -62,6 +65,7 @@ $products = $conn->query("SELECT * FROM products ORDER BY id DESC");
             <thead>
                 <tr>
                     <th>Product ID</th>
+
                     <th>Name</th>
                     <th>Original Price</th>
                     <th>Discount Price</th>
@@ -70,6 +74,7 @@ $products = $conn->query("SELECT * FROM products ORDER BY id DESC");
             </thead>
             <tbody>
                 <?php while($p = $products->fetch_assoc()): ?>
+
                     <tr>
                         <td><?php echo $p['id']; ?></td>
                         <td><?php echo $p['name']; ?></td>
